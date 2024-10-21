@@ -3,7 +3,7 @@ use std::fmt;
 use std::fs::File;
 
 use super::color_component::ColorComponent;
-use super::huffman_table::HuffmanTable;
+use super::huffman::HuffmanTable;
 use super::quantization_table::QuantizationTable;
 use super::segment::SegmentType;
 
@@ -324,8 +324,11 @@ impl Header {
 impl fmt::Display for Header {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "================================================\n")?;
-        write!(f, "SOF0 segment:\n")?;
-        write!(f, "height x width: {}x{}, components_number: {}\n", self.height, self.width, self.components_number)?;
+        write!(f, "SOF=============\n")?;
+        write!(f, "Height: {}\n", self.height)?;
+        write!(f, "Width: {}\n", self.width)?;
+
+        write!(f, "Color Components:\n")?;
 
         for i in 0..self.components_number {
             let i = i as usize;
@@ -335,8 +338,7 @@ impl fmt::Display for Header {
             write!(f, "{component}")?;
         }
 
-        write!(f, "================================================\n")?;
-        write!(f, "DQT segment:\n")?;
+        write!(f, "DQT=============\n")?;
         for i in 0..4 {
             let quantization_table: &QuantizationTable = &self.quantization_tables[i];
 
@@ -347,9 +349,36 @@ impl fmt::Display for Header {
             write!(f, "{quantization_table}")?;
         }
 
-        write!(f, "================================================\n")?;
-        write!(f, "DHT segment:\n")?;
-        write!(f, "AC Table:\n")?;
+        write!(f, "SOS=============\n")?;
+        write!(f, "Start of selection: {}\n", self.start_of_selection)?;
+        write!(f, "End of selection: {}\n", self.end_of_selection)?;
+        write!(f, "Successive Approximation High: {}\n", self.successive_approximation_high)?;
+        write!(f, "Successive Approximation Low: {}\n", self.successive_approximation_low)?;
+
+        write!(f, "Color Components:\n")?;
+
+        for i in 0..self.components_number as usize {
+            let color_component: &ColorComponent = &self.color_components[i];
+
+            write!(f, "Component ID: {}\n", i + 1)?;
+            write!(f, "Huffman DC Table ID: {}\n", color_component.huffman_dc_table_id)?;
+            write!(f, "Huffman AC Table ID: {}\n", color_component.huffman_ac_table_id)?;
+        }
+
+        write!(f, "DHT=============\n")?;
+
+        write!(f, "DC Tables:\n")?;
+        for i in 0..4 {
+            let table: &HuffmanTable = &self.dc_tables[i];
+
+            if HuffmanTable::default().eq(table) {
+                continue;
+            }
+
+            write!(f, "{table}")?;
+        }
+
+        write!(f, "AC Tables:\n")?;
         for i in 0..4 {
             let table: &HuffmanTable = &self.ac_tables[i];
 
@@ -360,25 +389,7 @@ impl fmt::Display for Header {
             write!(f, "{table}")?;
         }
 
-        write!(f, "DC Table:\n")?;
-        for i in 0..4 {
-            let table: &HuffmanTable = &self.dc_tables[i];
-
-            if HuffmanTable::default().eq(table) {
-                continue;
-            }
-
-        }
-
-        write!(f, "================================================\n")?;
-        write!(f, "SOS segment:\n")?;
-        write!(f, "Start of selection: {}\n", self.start_of_selection)?;
-        write!(f, "End of selection: {}\n", self.end_of_selection)?;
-        write!(f, "Successive approximation low: {}\n", self.successive_approximation_low)?;
-        write!(f, "Successive approximation high: {}\n", self.successive_approximation_high)?;
-
-        write!(f, "================================================\n")?;
-        write!(f, "DRI segment:\n")?;
+        write!(f, "DRI=============\n")?;
         write!(f, "Restart interval: {}\n", self.restart_interval)?;
 
         Ok(())

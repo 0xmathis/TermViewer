@@ -6,7 +6,6 @@ use std::io::Read;
 pub struct QuantizationTable {
     table: [u16; 64],
     table_id: u8,
-    element_size: u8,
 }
 
 
@@ -16,20 +15,14 @@ impl QuantizationTable {
             let mut buffer: Vec<u8> = Vec::new();
 
             if element_size == 0 {
-                self.element_size = 8;
-
                 buffer.resize(1, 0);
                 for i in Self::zigzag_map().into_iter() {
-                    let i = i as usize;
                     file.read_exact(&mut buffer).unwrap();
                     self.table[i] = buffer[0] as u16;
                 }
             } else {
-                self.element_size = 16;
-
                 buffer.resize(2, 0);
                 for i in Self::zigzag_map().into_iter() {
-                    let i = i as usize;
                     file.read_exact(&mut buffer).unwrap();
                     self.table[i] = ((buffer[0] as u16) << 8) + buffer[1] as u16;
                 }
@@ -38,7 +31,7 @@ impl QuantizationTable {
             self.table.len()
     }
 
-    fn zigzag_map() -> [u8; 64] {
+    fn zigzag_map() -> [usize; 64] {
         [
             0,   1,  8, 16,  9,  2,  3, 10,
             17, 24, 32, 25, 18, 11,  4,  5,
@@ -57,7 +50,6 @@ impl Default for QuantizationTable {
         Self {
             table: [0u16; 64],
             table_id: 0,
-            element_size: 0,
         }
     }
 }
@@ -72,11 +64,7 @@ impl Display for QuantizationTable {
                 write!(f, "\n")?;
             }
 
-            if self.element_size == 8 {
-                write!(f, "0x{:02X} ", self.table[j] & 0x0F)?;
-            } else if self.element_size == 16 {
-                write!(f, "0x{:04X} ", self.table[j])?;
-            }
+            write!(f, "{} ", self.table[j])?;
         }
 
         write!(f, "\n")

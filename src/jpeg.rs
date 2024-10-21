@@ -5,15 +5,17 @@ use std::io::Read;
 use header::Header;
 use segment::SegmentType;
 
-mod header;
-mod huffman_table;
 mod color_component;
 mod quantization_table;
 mod segment;
+pub mod bit_reader;
+pub mod header;
+pub mod huffman;
+pub mod mcu;
 
 #[derive(Debug, Default)]
 pub struct JPEG {
-    header: Header,
+    pub header: Header,
     huffman_data: Vec<u8>,
 }
 
