@@ -1,5 +1,6 @@
+use anyhow::Result;
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::Write;
 use std::path::PathBuf;
 
 use crate::jpeg::header::Header;
@@ -9,7 +10,7 @@ pub struct BMP {
 }
 
 impl BMP {
-    pub fn write_to_file(header: &Header, mcus: Vec<MCU>, filename: PathBuf) -> io::Result<()> {
+    pub fn write_to_file(header: &Header, mcus: Vec<MCU>, filename: PathBuf) -> Result<()> {
         let mcu_height: u32 = ((header.height + 7) / 8) as u32;
         let mcu_width: u32 = ((header.width + 7) / 8) as u32;
         let padding_size: u32 = (header.width % 4) as u32;
@@ -48,6 +49,8 @@ impl BMP {
         }
 
         let mut file: File = File::create(filename)?;
-        file.write_all(&buffer)
+        file.write_all(&buffer)?;
+
+        Ok(())
     }
 }

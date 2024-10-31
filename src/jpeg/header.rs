@@ -2,6 +2,8 @@ use std::io::Read;
 use std::fmt;
 use std::fs::File;
 
+use anyhow::{bail, Result};
+
 use super::color_component::ColorComponent;
 use super::huffman::HuffmanTable;
 use super::quantization_table::QuantizationTable;
@@ -28,20 +30,20 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn from_binary(file: &mut File) -> Self {
+    pub fn from_binary(file: &mut File) -> Result<Self> {
         let mut header: Header = Header::default();
         let mut marker: [u8; 2] = [0; 2];
 
         file.read_exact(&mut marker).unwrap();
         if SegmentType::from_marker(marker) != Some(SegmentType::SOI) {
-            panic!("JPEG file start with SOI marker");
+            bail!("JPEG file start with SOI marker");
         };
 
         loop {
             file.read_exact(&mut marker).unwrap();
 
             let Some(marker) = SegmentType::from_marker(marker) else {
-                panic!("marker {marker:02X?}: unknown");
+                bail!("marker {marker:02X?}: unknown");
             };
 
             println!("segment {marker:?}");
@@ -62,14 +64,14 @@ impl Header {
                     break;
                 },
                 SegmentType::TEM => {},
-                SegmentType::DAC => panic!("Arithmetic Coding mode not supported"),
-                SegmentType::EOI => panic!("Should not encounter EOI marker before SOS marker"),
-                SegmentType::RSTN => panic!("Should not encounter RSTN marker before SOS marker"),
-                SegmentType::SOI => println!("Embedded JPEG not supported\n"),
+                SegmentType::DAC => bail!("Arithmetic Coding mode not supported"),
+                SegmentType::EOI => bail!("Should not encounter EOI marker before SOS marker"),
+                SegmentType::RSTN => bail!("Should not encounter RSTN marker before SOS marker"),
+                SegmentType::SOI => bail!("Embedded JPEG not supported"),
             }
         }
 
-        header
+        Ok(header)
     }
 
     fn read_segment_appn(&mut self, file: &mut File) -> () {

@@ -1,9 +1,10 @@
+use anyhow::Result;
+use serde::Serialize;
 use std::fs::File;
-use std::io;
 use std::path::PathBuf;
 
 use bmp::BMP;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 
 use jpeg::huffman::huffman_decoder;
 use jpeg::mcu::MCU;
@@ -12,12 +13,28 @@ use jpeg::JPEG;
 mod bmp;
 mod jpeg;
 
+#[derive(ValueEnum, Clone, Debug, Serialize)]
+enum Type {
+    /// JPEG
+    JPEG,
+
+    /// PNG
+    PNG,
+
+    /// BMP
+    BMP,
+}
+
 /// TermViewer
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {
     /// File
     filepath: PathBuf,
+
+    /// File type
+    #[clap(default_value = "jpeg")]
+    filetype: Option<Type>,
 }
 
 // TODO: Be able to draw in the terminal (with colors)
@@ -27,15 +44,21 @@ struct Args {
 // https://koushtav.me/jpeg/tutorial/c++/decoder/2019/03/02/lets-write-a-simple-jpeg-library-part-2/#detailed-description-of-the-markers
 // https://imrannazar.com/series/lets-build-a-jpeg-decoder/huffman-tables
 
-fn main() -> io::Result<()> {
+fn main() -> Result<()> {
     let args: Args = Args::parse();
     let filepath: PathBuf = args.filepath;
+    
+    match args.filetype.expect("Should not be None") {
+        Type::JPEG => Type::JPEG,
+        Type::PNG => todo!(),
+        Type::BMP => todo!(),
+    };
 
     assert!(filepath.exists());
     assert!(filepath.is_file());
 
     let mut file: File = File::open(&filepath).unwrap();
-    let mut jpeg: JPEG = JPEG::from_file(&mut file);
+    let mut jpeg: JPEG = JPEG::from_file(&mut file)?;
     // println!("\n{jpeg}");
 
     let mcus: Vec<MCU> = huffman_decoder(&mut jpeg).expect("Should not panic");

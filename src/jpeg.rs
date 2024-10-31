@@ -2,6 +2,7 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
 
+use anyhow::{bail, Result};
 use header::Header;
 use segment::SegmentType;
 
@@ -20,14 +21,14 @@ pub struct JPEG {
 }
 
 impl JPEG {
-    pub fn from_file(file: &mut File) -> Self {
-        Self {
-            header: Header::from_binary(file),
-            huffman_data: Self::read_huffman_data(file),
-        }
+    pub fn from_file(file: &mut File) -> Result<Self> {
+        Ok(Self {
+            header: Header::from_binary(file)?,
+            huffman_data: Self::read_huffman_data(file)?,
+        })
     }
 
-    fn read_huffman_data(file: &mut File) -> Vec<u8> {
+    fn read_huffman_data(file: &mut File) -> Result<Vec<u8>> {
         let mut huffman_data: Vec<u8> = Vec::new();
         let mut current: [u8; 1] = [0; 1];
         let mut previous: [u8; 1];
@@ -50,14 +51,14 @@ impl JPEG {
                 } else if current == [0xFF] { // ignore multiple 0xFF in a row
                     continue;
                 } else {
-                    panic!("Invalid marker during compressed data scan: 0xFF{}", current[0]);
+                    bail!("Invalid marker during compressed data scan: 0xFF{}", current[0]);
                 }
             } else {
                 huffman_data.push(previous[0]);
             }
         }
 
-        huffman_data
+        Ok(huffman_data)
     }
 }
 
