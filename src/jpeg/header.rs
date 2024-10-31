@@ -222,15 +222,21 @@ impl Header {
 
         let mut zero_based: bool = false;
 
-        for _ in 0..component_numbers {
+        for i in 0..component_numbers {
             file.read_exact(&mut buffer1).unwrap();
             let mut component_id: u8 = buffer1[0];
             assert!(component_id <= 3);
 
-            if component_id == 0 {
+            if component_id == 0 && i == 0 {
                 zero_based = true;
+            }
+
+            if zero_based {
                 component_id += 1;
             }
+
+            assert_ne!(component_id, 0);
+            assert!(component_id <= component_numbers);
 
             let len: usize = self.color_components
                 .get_mut((component_id - 1) as usize)
@@ -257,7 +263,7 @@ impl Header {
         count -= 2;
 
         for component in self.color_components.iter_mut() {
-            component.used = false;
+            component.used_scan = false;
         }
 
         file.read_exact(&mut buffer1).unwrap();
@@ -279,8 +285,9 @@ impl Header {
                 .get_mut(component_id as usize - 1usize)
                 .expect("Should not panic");
 
-            assert_eq!(color_component.used, false);
-            color_component.used = true;
+            assert_eq!(color_component.used_frame, true);
+            assert_eq!(color_component.used_scan, false);
+            color_component.used_scan = true;
 
             file.read_exact(&mut buffer1).unwrap();
             let huffman_table_ids: u8 = buffer1[0];

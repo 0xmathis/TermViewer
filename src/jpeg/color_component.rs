@@ -9,12 +9,13 @@ pub struct ColorComponent {
     quantization_table_id: u8,
     pub huffman_ac_table_id: u8,
     pub huffman_dc_table_id: u8,
-    pub used: bool
+    pub used_scan: bool,
+    pub used_frame: bool,
 }
 
 impl ColorComponent {
     pub fn from_binary(&mut self, file: &mut File) -> usize {
-        assert_eq!(self.used, false);
+        assert_eq!(self.used_frame, false);
 
         let mut buffer: [u8; 1] = [0; 1];
         file.read_exact(&mut buffer).unwrap();
@@ -27,7 +28,7 @@ impl ColorComponent {
         self.horizontal_sampling_factor = (sampling_factor >> 4) & 0x0F;
         self.vertical_sampling_factor = sampling_factor & 0x0F;
         self.quantization_table_id = quantization_table_id;
-        self.used = true;
+        self.used_frame = true;
 
         3
     }
@@ -49,7 +50,8 @@ impl Default for ColorComponent {
             quantization_table_id: 0,
             huffman_ac_table_id: 0,
             huffman_dc_table_id: 0,
-            used: false,
+            used_frame: false,
+            used_scan: false,
         }
     }
 }
