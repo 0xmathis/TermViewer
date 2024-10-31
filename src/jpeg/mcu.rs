@@ -1,29 +1,30 @@
 use super::bit_reader::BitReader;
 use super::huffman::HuffmanTable;
+use super::mcu_component::MCUComponent;
 
 #[derive(Debug, Clone, Copy)]
 pub struct MCU {
-    pub r: [i32; 64],
-    pub g: [i32; 64],
-    pub b: [i32; 64],
+    pub component1: MCUComponent,
+    pub component2: MCUComponent,
+    pub component3: MCUComponent,
 }
 
 impl Default for MCU {
     fn default() -> Self {
         Self {
-            r: [0; 64],
-            g: [0; 64],
-            b: [0; 64],
+            component1: MCUComponent::YCbCr([0; 64]),
+            component2: MCUComponent::YCbCr([0; 64]),
+            component3: MCUComponent::YCbCr([0; 64]),
         }
     }
 }
 
 impl MCU {
-    pub fn get_mut(&mut self, i: usize) -> Option<&mut [i32; 64]> {
+    pub fn get_mut(&mut self, i: usize) -> Option<&mut MCUComponent> {
         match i {
-            0 => Some(&mut self.r),
-            1 => Some(&mut self.g),
-            2 => Some(&mut self.b),
+            0 => Some(&mut self.component1),
+            1 => Some(&mut self.component2),
+            2 => Some(&mut self.component3),
             _ => None,
         }
     }
@@ -110,7 +111,7 @@ impl MCU {
         true
     }
 
-    fn zigzag_map() -> [usize; 64] {
+    const fn zigzag_map() -> [usize; 64] {
         [
             0,   1,  8, 16,  9,  2,  3, 10,
             17, 24, 32, 25, 18, 11,  4,  5,

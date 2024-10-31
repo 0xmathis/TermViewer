@@ -5,12 +5,15 @@ use std::path::PathBuf;
 
 use crate::jpeg::header::Header;
 use crate::jpeg::mcu::MCU;
+use crate::jpeg::JPEG;
 
 pub struct BMP {
 }
 
 impl BMP {
-    pub fn write_to_file(header: &Header, mcus: Vec<MCU>, filename: PathBuf) -> Result<()> {
+    pub fn write_to_file(jpeg: &JPEG, filename: PathBuf) -> Result<()> {
+        let header: &Header = &jpeg.header;
+        let mcus: &Vec<MCU> = &jpeg.mcus;
         let mcu_height: u32 = ((header.height + 7) / 8) as u32;
         let mcu_width: u32 = ((header.width + 7) / 8) as u32;
         let padding_size: u32 = (header.width % 4) as u32;
@@ -38,9 +41,9 @@ impl BMP {
                 let mcu_index: usize = (mcu_row * mcu_width + mcu_column) as usize;
                 let pixel_index: usize = (pixel_row * 8 + pixel_column) as usize;
 
-                buffer.push(mcus[mcu_index].b[pixel_index] as u8);
-                buffer.push(mcus[mcu_index].g[pixel_index] as u8);
-                buffer.push(mcus[mcu_index].r[pixel_index] as u8);
+                buffer.push(mcus[mcu_index].component3[pixel_index] as u8);
+                buffer.push(mcus[mcu_index].component2[pixel_index] as u8);
+                buffer.push(mcus[mcu_index].component1[pixel_index] as u8);
             }
 
             for _ in 0..padding_size {

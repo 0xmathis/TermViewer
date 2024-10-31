@@ -2,11 +2,6 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
 
-use super::bit_reader::BitReader;
-use super::header::Header;
-use super::mcu::MCU;
-use super::JPEG;
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct HuffmanTable {
     table_id: u8,
@@ -90,63 +85,4 @@ impl Display for HuffmanTable {
 
         Ok(())
     }
-}
-
-pub fn huffman_decoder(jpeg: &mut JPEG) -> Option<Vec<MCU>> {
-    let header: &mut Header = &mut jpeg.header;
-
-    let mcu_height: usize = ((header.height + 7) / 8) as usize;
-    let mcu_width: usize = ((header.width + 7) / 8) as usize;
-
-    let mut mcus: Vec<MCU> = Vec::new();
-    mcus.resize(mcu_height * mcu_width, MCU::default());
-
-    for i in 0..4 {
-        header.ac_tables
-            .get_mut(i)
-            .expect("Should not panic")
-            .generate_codes();
-
-        header.dc_tables
-            .get_mut(i)
-            .expect("Should not panic")
-            .generate_codes();
-    }
-
-    let mut bit_reader: BitReader = BitReader::new(&jpeg.huffman_data);
-    let mut previous_dcs: [i32; 3] = [0; 3];
-
-    for i in 0..mcu_height*mcu_width {
-        if header.restart_interval != 0 && i % header.restart_interval as usize == 0 {
-            previous_dcs[0] = 0;
-            previous_dcs[1] = 0;
-            previous_dcs[2] = 0;
-            bit_reader.align();
-        }
-
-        for j in 0..header.components_number as usize{
-            let ac_table_id: usize = header
-                .color_components[j]
-                .huffman_ac_table_id as usize;
-            let dc_table_id: usize = header
-                .color_components[j]
-                .huffman_dc_table_id as usize;
-            let previous_dc: &mut i32 = previous_dcs
-                .get_mut(j)
-                .expect("Should not panic");
-            let ac_table = &header.ac_tables[ac_table_id];
-            let dc_table = &header.dc_tables[dc_table_id];
-
-            let result: bool = mcus
-                .get_mut(i)
-                .expect("Should not panic")
-                .decode(j, &mut bit_reader, previous_dc, ac_table, dc_table);
-
-            if !result {
-                return None;
-            }
-        }
-    }
-
-    Some(mcus)
 }

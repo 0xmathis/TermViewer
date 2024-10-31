@@ -339,8 +339,7 @@ impl fmt::Display for Header {
 
         write!(f, "Color Components:\n")?;
 
-        for i in 0..self.components_number {
-            let i = i as usize;
+        for i in 0..self.components_number as usize {
             let component: &ColorComponent = &self.color_components[i];
 
             write!(f, "Component ID: {}\n", i+1)?;

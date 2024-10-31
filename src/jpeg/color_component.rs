@@ -6,7 +6,7 @@ use std::io::Read;
 pub struct ColorComponent {
     horizontal_sampling_factor: u8,
     vertical_sampling_factor: u8,
-    quantization_table_id: u8,
+    pub quantization_table_id: u8,
     pub huffman_ac_table_id: u8,
     pub huffman_dc_table_id: u8,
     pub used_scan: bool,

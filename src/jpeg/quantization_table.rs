@@ -4,10 +4,9 @@ use std::io::Read;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct QuantizationTable {
-    table: [u16; 64],
+    pub table: [u16; 64],
     table_id: u8,
 }
-
 
 impl QuantizationTable {
     pub fn from_binary(&mut self, file: &mut File, table_id: u8, element_size: u8) -> usize {

@@ -6,8 +6,6 @@ use std::path::PathBuf;
 use bmp::BMP;
 use clap::{Parser, ValueEnum};
 
-use jpeg::huffman::huffman_decoder;
-use jpeg::mcu::MCU;
 use jpeg::JPEG;
 
 mod bmp;
@@ -61,8 +59,11 @@ fn main() -> Result<()> {
     let mut jpeg: JPEG = JPEG::from_file(&mut file)?;
     // println!("\n{jpeg}");
 
-    let mcus: Vec<MCU> = huffman_decoder(&mut jpeg).expect("Should not panic");
+    jpeg.huffman_decode()?;
+    jpeg.dequantize()?;
+    jpeg.inverse_dct()?;
+
     let mut bmp_filepath = filepath.to_str().unwrap().to_owned();
     bmp_filepath.push_str(".bmp");
-    BMP::write_to_file(&jpeg.header, mcus, PathBuf::from(bmp_filepath))
+    BMP::write_to_file(&jpeg, PathBuf::from(bmp_filepath))
 }
