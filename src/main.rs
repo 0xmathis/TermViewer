@@ -56,14 +56,12 @@ fn main() -> Result<()> {
     assert!(filepath.is_file());
 
     let mut file: File = File::open(&filepath).unwrap();
-    let mut jpeg: JPEG = JPEG::from_file(&mut file)?;
+    let jpeg: JPEG = JPEG::from_file(&mut file)?;
     // println!("\n{jpeg}");
 
-    jpeg.huffman_decode()?;
-    jpeg.dequantize()?;
-    jpeg.inverse_dct()?;
+    let bmp: BMP = jpeg.to_bmp()?;
 
     let mut bmp_filepath = filepath.to_str().unwrap().to_owned();
     bmp_filepath.push_str(".bmp");
-    BMP::write_to_file(&jpeg, PathBuf::from(bmp_filepath))
+    bmp.write_to_file(PathBuf::from(bmp_filepath))
 }

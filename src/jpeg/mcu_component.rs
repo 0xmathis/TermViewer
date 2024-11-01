@@ -3,15 +3,12 @@ use std::ops::{Index, IndexMut};
 use super::quantization_table::QuantizationTable;
 
 #[derive(Debug, Clone, Copy)]
-pub enum MCUComponent {
-    RGB([i32; 64]),
-    YCbCr([i32; 64]),
-}
+pub struct MCUComponent([i32; 64]);
 
 impl MCUComponent {
     pub fn dequantize(&mut self, table: &QuantizationTable) -> () {
         for i in 0..64 {
-            self[i] *= table.table[i] as i32;
+            self[i] *= table.table(i) as i32;
         }
     }
 
@@ -124,22 +121,24 @@ impl MCUComponent {
     }
 }
 
+impl Default for MCUComponent {
+    fn default() -> Self {
+        Self {
+            0: [0; 64],
+        }
+    }
+}
+
 impl Index<usize> for MCUComponent {
     type Output = i32;
 
     fn index(&self, index: usize) -> &Self::Output {
-        match self {
-            MCUComponent::RGB(values) => &values[index],
-            MCUComponent::YCbCr(values) => &values[index],
-        }
+        &self.0[index]
     }
 }
 
 impl IndexMut<usize> for MCUComponent {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        match self {
-            MCUComponent::RGB(values) => &mut values[index],
-            MCUComponent::YCbCr(values) => &mut values[index],
-        }
+        &mut self.0[index]
     }
 }

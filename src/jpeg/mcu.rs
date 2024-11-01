@@ -2,31 +2,18 @@ use super::bit_reader::BitReader;
 use super::huffman::HuffmanTable;
 use super::mcu_component::MCUComponent;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct MCU {
-    pub component1: MCUComponent,
-    pub component2: MCUComponent,
-    pub component3: MCUComponent,
-}
-
-impl Default for MCU {
-    fn default() -> Self {
-        Self {
-            component1: MCUComponent::YCbCr([0; 64]),
-            component2: MCUComponent::YCbCr([0; 64]),
-            component3: MCUComponent::YCbCr([0; 64]),
-        }
-    }
+    components: [MCUComponent; 3],
 }
 
 impl MCU {
-    pub fn get_mut(&mut self, i: usize) -> Option<&mut MCUComponent> {
-        match i {
-            0 => Some(&mut self.component1),
-            1 => Some(&mut self.component2),
-            2 => Some(&mut self.component3),
-            _ => None,
-        }
+    pub fn component(&self, i: usize) -> Option<&MCUComponent> {
+        self.components.get(i)
+    }
+
+    pub fn component_mut(&mut self, i: usize) -> Option<&mut MCUComponent> {
+        self.components.get_mut(i)
     }
 
     fn next_symbol(reader: &mut BitReader, table: &HuffmanTable) -> Option<u8> {
@@ -36,9 +23,9 @@ impl MCU {
             let bit: u8 = reader.read_bit()?;
             code = (code << 1) | bit as u32;
 
-            for j in table.offsets[i]..table.offsets[i+1] {
-                if code == table.codes[j as usize] {
-                    return Some(table.symbols[j as usize]);
+            for j in table.offsets(i)..table.offsets(i+1) {
+                if code == table.codes(j as usize) {
+                    return Some(table.symbols(j as usize));
                 }
             }
         }
@@ -47,7 +34,7 @@ impl MCU {
     }
 
     pub fn decode(&mut self, component_id: usize, reader: &mut BitReader, previous_dc: &mut i32, ac_table: &HuffmanTable, dc_table: &HuffmanTable) -> bool {
-        let Some(component) = self.get_mut(component_id) else {
+        let Some(component) = self.component_mut(component_id) else {
             return false;
         };
 
@@ -122,5 +109,21 @@ impl MCU {
             58, 59, 52, 45, 38, 31, 39, 46,
             53, 60, 61, 54, 47, 55, 62, 63
         ]
+    }
+
+    pub fn ycbcr_to_rgb(&mut self) -> () {
+        for i in 0..64 {
+            let mut r: i32 = self.components[0][i] + (1.402 * self.components[2][i] as f32) as i32 + 128;
+            let mut g: i32 = self.components[0][i] - (0.344 * self.components[1][i] as f32) as i32 - (0.714 * self.components[2][i] as f32) as i32 + 128;
+            let mut b: i32 = self.components[0][i] + (1.772 * self.components[1][i] as f32) as i32 + 128;
+
+            if r < 0 { r = 0; } else if r > 255 { r = 255; }
+            if g < 0 { g = 0; } else if g > 255 { g = 255; }
+            if b < 0 { b = 0; } else if b > 255 { b = 255; }
+
+            self.components[0][i] = r;
+            self.components[1][i] = g;
+            self.components[2][i] = b;
+        }
     }
 }

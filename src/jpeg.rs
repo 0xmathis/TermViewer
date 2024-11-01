@@ -1,4 +1,5 @@
-use std::{f32::consts::PI, fmt::Display};
+use std::f32::consts::PI;
+use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
 
@@ -9,6 +10,8 @@ use header::Header;
 use mcu::MCU;
 use quantization_table::QuantizationTable;
 use segment::SegmentType;
+
+use crate::bmp::BMP;
 
 mod color_component;
 mod mcu_component;
@@ -21,9 +24,9 @@ pub mod quantization_table;
 
 #[derive(Debug, Default)]
 pub struct JPEG {
-    pub header: Header,
+    header: Header,
     huffman_data: Vec<u8>,
-    pub mcus: Vec<MCU>,
+    mcus: Vec<MCU>,
 }
 
 impl JPEG {
@@ -33,6 +36,15 @@ impl JPEG {
             huffman_data: Self::read_huffman_data(file)?,
             mcus: Vec::new(),
         })
+    }
+
+    pub fn to_bmp(mut self) -> Result<BMP> {
+        self.huffman_decode()?;
+        self.dequantize()?;
+        self.inverse_dct()?;
+        self.ycbcr_to_rgb()?;
+
+        Ok(BMP::new(self.header, self.mcus))
     }
 
     fn read_huffman_data(file: &mut File) -> Result<Vec<u8>> {
@@ -65,10 +77,14 @@ impl JPEG {
             }
         }
 
+        // for i in 0..20000 {
+        //     println!("data: {}", huffman_data[i]);
+        // }
+
         Ok(huffman_data)
     }
 
-    pub fn huffman_decode(&mut self) -> Result<()> {
+    fn huffman_decode(&mut self) -> Result<()> {
         let header: &mut Header = &mut self.header;
 
         let mcu_height: usize = ((header.height + 7) / 8) as usize;
@@ -120,6 +136,7 @@ impl JPEG {
                     .decode(j, &mut bit_reader, previous_dc, ac_table, dc_table);
 
                 if !result {
+                    // return Ok(());
                     bail!("Decoding MCU {} failed", j);
                 }
             }
@@ -128,7 +145,7 @@ impl JPEG {
         Ok(())
     }
 
-    pub fn dequantize(&mut self) -> Result<()> {
+    fn dequantize(&mut self) -> Result<()> {
         let header: &mut Header = &mut self.header;
 
         let mcu_height: usize = ((header.height + 7) / 8) as usize;
@@ -150,7 +167,7 @@ impl JPEG {
                 self.mcus
                     .get_mut(i)
                     .expect("Should not panic")
-                    .get_mut(j)
+                    .component_mut(j)
                     .expect("Should not panic")
                     .dequantize(table);
                 }
@@ -183,7 +200,7 @@ impl JPEG {
         ]
     }
 
-    pub fn inverse_dct(&mut self) -> Result<()> {
+    fn inverse_dct(&mut self) -> Result<()> {
         let header: &mut Header = &mut self.header;
 
         let mcu_height: usize = ((header.height + 7) / 8) as usize;
@@ -200,10 +217,27 @@ impl JPEG {
 
             for j in 0..header.components_number as usize {
                 mcu
-                    .get_mut(j)
+                    .component_mut(j)
                     .expect("Should not panic")
                     .inverse_dct(&dct_m, &dct_s);
                 }
+        }
+
+        Ok(())
+    }
+
+    fn ycbcr_to_rgb(&mut self) -> Result<()> {
+        let header: &mut Header = &mut self.header;
+
+        let mcu_height: usize = ((header.height + 7) / 8) as usize;
+        let mcu_width: usize = ((header.width + 7) / 8) as usize;
+
+        // Refactor these loops ?
+        for i in 0..mcu_height*mcu_width {
+            self.mcus
+                .get_mut(i)
+                .expect("Should not panic")
+                .ycbcr_to_rgb();
         }
 
         Ok(())

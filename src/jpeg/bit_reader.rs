@@ -18,7 +18,7 @@ impl <'a> BitReader<'a> {
             return None;
         }
 
-        let bit: u8 = (self.data[self.next_byte] >> (7 - self.next_bit)) & 1;
+        let bit: u8 = (self.data[self.next_byte] >> (7 - self.next_bit)) & 0x1;
         self.next_bit += 1;
 
         if self.next_bit == 8 {

@@ -1,6 +1,6 @@
-use std::io::Read;
 use std::fmt;
 use std::fs::File;
+use std::io::Read;
 
 use anyhow::{bail, Result};
 

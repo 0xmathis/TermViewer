@@ -5,9 +5,9 @@ use std::io::Read;
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct HuffmanTable {
     table_id: u8,
-    pub offsets: [u8; 17],
-    pub symbols: [u8; 162],
-    pub codes: [u32; 162],
+    offsets: [u8; 17],
+    symbols: [u8; 162],
+    codes: [u32; 162],
     is_ac_table: bool,
     is_set: bool,
 }
@@ -26,6 +26,18 @@ impl Default for HuffmanTable {
 }
 
 impl HuffmanTable {
+    pub fn offsets(&self, index: usize) -> u8 {
+        self.offsets[index]
+    }
+
+    pub fn symbols(&self, index: usize) -> u8 {
+        self.symbols[index]
+    }
+
+    pub fn codes(&self, index: usize) -> u32 {
+        self.codes[index]
+    }
+
     pub fn from_binary(&mut self, file: &mut File, table_id: u8, is_ac_table: bool) -> usize {
         self.symbols[0] = 0;
         self.table_id = table_id;

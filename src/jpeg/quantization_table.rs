@@ -4,11 +4,15 @@ use std::io::Read;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct QuantizationTable {
-    pub table: [u16; 64],
+    table: [u16; 64],
     table_id: u8,
 }
 
 impl QuantizationTable {
+    pub fn table(&self, index: usize) -> u16 {
+        self.table[index]
+    }
+
     pub fn from_binary(&mut self, file: &mut File, table_id: u8, element_size: u8) -> usize {
             self.table_id = table_id;
             let mut buffer: Vec<u8> = Vec::new();
