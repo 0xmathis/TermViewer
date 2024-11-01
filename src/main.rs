@@ -1,27 +1,11 @@
 use anyhow::Result;
-use serde::Serialize;
-use std::fs::File;
+use clap::Parser;
 use std::path::PathBuf;
 
-use bmp::BMP;
-use clap::{Parser, ValueEnum};
+use image::{from_file, ImageType};
+use image::bmp::BMP;
 
-use jpeg::JPEG;
-
-mod bmp;
-mod jpeg;
-
-#[derive(ValueEnum, Clone, Debug, Serialize)]
-enum Type {
-    /// JPEG
-    JPEG,
-
-    /// PNG
-    PNG,
-
-    /// BMP
-    BMP,
-}
+mod image;
 
 /// TermViewer
 #[derive(Parser)]
@@ -32,7 +16,7 @@ struct Args {
 
     /// File type
     #[clap(default_value = "jpeg")]
-    filetype: Option<Type>,
+    filetype: Option<ImageType>,
 }
 
 // TODO: Be able to draw in the terminal (with colors)
@@ -45,22 +29,12 @@ struct Args {
 fn main() -> Result<()> {
     let args: Args = Args::parse();
     let filepath: PathBuf = args.filepath;
-    
-    match args.filetype.expect("Should not be None") {
-        Type::JPEG => Type::JPEG,
-        Type::PNG => todo!(),
-        Type::BMP => todo!(),
-    };
+    let image_type: ImageType = args.filetype.expect("Should not be None");
 
     assert!(filepath.exists());
     assert!(filepath.is_file());
 
-    let mut file: File = File::open(&filepath).unwrap();
-    let jpeg: JPEG = JPEG::from_file(&mut file)?;
-    // println!("\n{jpeg}");
-
-    let bmp: BMP = jpeg.to_bmp()?;
-
+    let bmp: BMP = from_file(&filepath, image_type)?.to_bmp()?;
     let mut bmp_filepath = filepath.to_str().unwrap().to_owned();
     bmp_filepath.push_str(".bmp");
     bmp.write_to_file(PathBuf::from(bmp_filepath))

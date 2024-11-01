@@ -1,20 +1,21 @@
+use anyhow::{bail, Result};
 use std::f32::consts::PI;
-use std::fmt::Display;
+use std::fmt;
 use std::fs::File;
 use std::io::Read;
 
-use anyhow::{bail, Result};
 use bit_reader::BitReader;
 use color_component::ColorComponent;
-use header::Header;
+use header::JPEGHeader;
 use mcu::MCU;
 use quantization_table::QuantizationTable;
 use segment::SegmentType;
 
-use crate::bmp::BMP;
+use super::Image;
+use super::bmp::BMP;
 
 mod color_component;
-mod mcu_component;
+pub mod mcu_component;
 mod segment;
 pub mod bit_reader;
 pub mod header;
@@ -24,29 +25,12 @@ pub mod quantization_table;
 
 #[derive(Debug, Default)]
 pub struct JPEG {
-    header: Header,
+    header: JPEGHeader,
     huffman_data: Vec<u8>,
     mcus: Vec<MCU>,
 }
 
 impl JPEG {
-    pub fn from_file(file: &mut File) -> Result<Self> {
-        Ok(Self {
-            header: Header::from_binary(file)?,
-            huffman_data: Self::read_huffman_data(file)?,
-            mcus: Vec::new(),
-        })
-    }
-
-    pub fn to_bmp(mut self) -> Result<BMP> {
-        self.huffman_decode()?;
-        self.dequantize()?;
-        self.inverse_dct()?;
-        self.ycbcr_to_rgb()?;
-
-        Ok(BMP::new(self.header, self.mcus))
-    }
-
     fn read_huffman_data(file: &mut File) -> Result<Vec<u8>> {
         let mut huffman_data: Vec<u8> = Vec::new();
         let mut current: [u8; 1] = [0; 1];
@@ -77,15 +61,11 @@ impl JPEG {
             }
         }
 
-        // for i in 0..20000 {
-        //     println!("data: {}", huffman_data[i]);
-        // }
-
         Ok(huffman_data)
     }
 
     fn huffman_decode(&mut self) -> Result<()> {
-        let header: &mut Header = &mut self.header;
+        let header: &mut JPEGHeader = &mut self.header;
 
         let mcu_height: usize = ((header.height + 7) / 8) as usize;
         let mcu_width: usize = ((header.width + 7) / 8) as usize;
@@ -146,7 +126,7 @@ impl JPEG {
     }
 
     fn dequantize(&mut self) -> Result<()> {
-        let header: &mut Header = &mut self.header;
+        let header: &mut JPEGHeader = &mut self.header;
 
         let mcu_height: usize = ((header.height + 7) / 8) as usize;
         let mcu_width: usize = ((header.width + 7) / 8) as usize;
@@ -201,7 +181,7 @@ impl JPEG {
     }
 
     fn inverse_dct(&mut self) -> Result<()> {
-        let header: &mut Header = &mut self.header;
+        let header: &mut JPEGHeader = &mut self.header;
 
         let mcu_height: usize = ((header.height + 7) / 8) as usize;
         let mcu_width: usize = ((header.width + 7) / 8) as usize;
@@ -227,7 +207,7 @@ impl JPEG {
     }
 
     fn ycbcr_to_rgb(&mut self) -> Result<()> {
-        let header: &mut Header = &mut self.header;
+        let header: &mut JPEGHeader = &mut self.header;
 
         let mcu_height: usize = ((header.height + 7) / 8) as usize;
         let mcu_width: usize = ((header.width + 7) / 8) as usize;
@@ -244,8 +224,27 @@ impl JPEG {
     }
 }
 
-impl Display for JPEG {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Image for JPEG {
+    fn from_file(mut file: File) -> Result<Self> {
+        Ok(Self {
+            header: JPEGHeader::from_binary(&mut file)?,
+            huffman_data: Self::read_huffman_data(&mut file)?,
+            mcus: Vec::new(),
+        })
+    }
+
+    fn to_bmp(&mut self) -> Result<BMP> {
+        self.huffman_decode()?;
+        self.dequantize()?;
+        self.inverse_dct()?;
+        self.ycbcr_to_rgb()?;
+
+        Ok(BMP::new(self.header.to_bmp(), self.mcus.clone()))
+    }
+}
+
+impl fmt::Display for JPEG {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Header:\n\n{}\n", self.header)?;
         write!(f, "Huffman data length: {}\n", self.huffman_data.len())
     }

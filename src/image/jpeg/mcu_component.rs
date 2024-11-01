@@ -123,9 +123,7 @@ impl MCUComponent {
 
 impl Default for MCUComponent {
     fn default() -> Self {
-        Self {
-            0: [0; 64],
-        }
+        Self::from([0; 64])
     }
 }
 
@@ -140,5 +138,13 @@ impl Index<usize> for MCUComponent {
 impl IndexMut<usize> for MCUComponent {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.0[index]
+    }
+}
+
+impl From<[i32; 64]> for MCUComponent {
+    fn from(value: [i32; 64]) -> Self {
+        Self {
+            0: value,
+        }
     }
 }

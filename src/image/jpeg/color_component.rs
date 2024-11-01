@@ -15,7 +15,7 @@ pub struct ColorComponent {
 
 impl ColorComponent {
     pub fn from_binary(&mut self, file: &mut File) -> usize {
-        assert_eq!(self.used_frame, false);
+        assert_eq!(false, self.used_frame);
 
         let mut buffer: [u8; 1] = [0; 1];
         file.read_exact(&mut buffer).unwrap();
