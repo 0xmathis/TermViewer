@@ -38,9 +38,9 @@ fn main() -> Result<()> {
 
     let bmp: BMP = from_file(&filepath, image_type)?.to_bmp()?;
     // println!("{bmp}");
-    let mut bmp_filepath = filepath.to_str().unwrap().to_owned();
-    bmp_filepath.push_str(".bmp");
-    bmp.write_to_file(PathBuf::from(bmp_filepath))?;
+    // let mut bmp_filepath = filepath.to_str().unwrap().to_owned();
+    // bmp_filepath.push_str(".bmp");
+    // bmp.write_to_file(PathBuf::from(bmp_filepath))?;
 
     draw(bmp);
 

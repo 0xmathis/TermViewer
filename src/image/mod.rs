@@ -29,7 +29,6 @@ pub trait Image {
     fn width(&self) -> u16;
     fn height(&self) -> u16;
     fn mcus(&self) -> &Vec<MCU>;
-    fn mcus_mut(&mut self) -> &mut Vec<MCU>;
 }
 
 pub fn from_file(filepath: &PathBuf, image_type: ImageType) -> Result<Box<dyn Image>> {

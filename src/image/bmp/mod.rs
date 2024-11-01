@@ -141,10 +141,6 @@ impl Image for BMP {
     fn mcus(&self) -> &Vec<MCU> {
         &self.mcus
     }
-
-    fn mcus_mut(&mut self) -> &mut Vec<MCU> {
-        &mut self.mcus
-    }
 }
 
 impl fmt::Display for BMP {
