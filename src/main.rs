@@ -1,11 +1,13 @@
 use anyhow::Result;
 use clap::Parser;
+use term_drawer::drawer::draw;
 use std::path::PathBuf;
 
 use image::{from_file, ImageType};
 use image::bmp::BMP;
 
 mod image;
+mod term_drawer;
 
 /// TermViewer
 #[derive(Parser)]
@@ -35,7 +37,12 @@ fn main() -> Result<()> {
     assert!(filepath.is_file());
 
     let bmp: BMP = from_file(&filepath, image_type)?.to_bmp()?;
+    // println!("{bmp}");
     let mut bmp_filepath = filepath.to_str().unwrap().to_owned();
     bmp_filepath.push_str(".bmp");
-    bmp.write_to_file(PathBuf::from(bmp_filepath))
+    bmp.write_to_file(PathBuf::from(bmp_filepath))?;
+
+    draw(bmp);
+
+    Ok(())
 }

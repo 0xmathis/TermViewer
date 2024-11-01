@@ -35,12 +35,10 @@ impl BMPHeader {
 
         file.read_exact(&mut buffer4)?;
         header.starting_offset = ((buffer4[3] as u32) << 24) + ((buffer4[2] as u32) << 16) + ((buffer4[1] as u32) << 8) + buffer4[0] as u32;
-        assert_eq!(0x1Au32, header.starting_offset);
         count += 4;
 
         file.read_exact(&mut buffer4)?;
         header.header_size = ((buffer4[3] as u32) << 24) + ((buffer4[2] as u32) << 16) + ((buffer4[1] as u32) << 8) + buffer4[0] as u32;
-        assert_eq!(12u32, header.header_size);
         count += 4;
 
         file.read_exact(&mut buffer2)?;
@@ -58,7 +56,6 @@ impl BMPHeader {
 
         file.read_exact(&mut buffer2)?;
         header.bits_per_pixel = ((buffer2[1] as u16) << 8) + buffer2[0] as u16;
-        assert_eq!(24u16, header.bits_per_pixel);
         count += 2;
 
         assert_eq!(header.starting_offset, count);

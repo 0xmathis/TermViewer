@@ -129,10 +129,26 @@ impl Image for BMP {
     fn to_bmp(&mut self) -> Result<BMP> {
         Ok(self.clone())
     }
+
+    fn width(&self) -> u16 {
+        self.header.width
+    }
+
+    fn height(&self) -> u16 {
+        self.header.height
+    }
+
+    fn mcus(&self) -> &Vec<MCU> {
+        &self.mcus
+    }
+
+    fn mcus_mut(&mut self) -> &mut Vec<MCU> {
+        &mut self.mcus
+    }
 }
 
 impl fmt::Display for BMP {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Header:\n{}\n", self.header)
+        write!(f, "Header:\n{}", self.header)
     }
 }

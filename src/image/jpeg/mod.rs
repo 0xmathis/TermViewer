@@ -235,6 +235,22 @@ impl Image for JPEG {
 
         Ok(BMP::new(self.header.to_bmp(), self.mcus.clone()))
     }
+
+    fn width(&self) -> u16 {
+        self.header.width
+    }
+
+    fn height(&self) -> u16 {
+        self.header.height
+    }
+
+    fn mcus(&self) -> &Vec<MCU> {
+        &self.mcus
+    }
+
+    fn mcus_mut(&mut self) -> &mut Vec<MCU> {
+        &mut self.mcus
+    }
 }
 
 impl fmt::Display for JPEG {
