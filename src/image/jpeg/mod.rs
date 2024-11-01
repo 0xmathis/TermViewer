@@ -4,24 +4,18 @@ use std::fmt;
 use std::fs::File;
 use std::io::Read;
 
-use bit_reader::BitReader;
 use color_component::ColorComponent;
 use header::JPEGHeader;
-use mcu::MCU;
-use quantization_table::QuantizationTable;
 use segment::SegmentType;
-
 use super::Image;
+use super::bit_reader::BitReader;
 use super::bmp::BMP;
+use super::mcu::MCU;
+use super::quantization_table::QuantizationTable;
 
 mod color_component;
-pub mod mcu_component;
 mod segment;
-pub mod bit_reader;
-pub mod header;
-pub mod huffman;
-pub mod mcu;
-pub mod quantization_table;
+mod header;
 
 #[derive(Debug, Default)]
 pub struct JPEG {

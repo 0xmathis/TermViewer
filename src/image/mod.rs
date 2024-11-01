@@ -4,12 +4,16 @@ use serde::Serialize;
 use std::fs::File;
 use std::path::PathBuf;
 
-
 use bmp::BMP;
 use jpeg::JPEG;
 
+mod bit_reader;
+mod huffman;
+mod jpeg;
+mod mcu;
+mod mcu_component;
+mod quantization_table;
 pub mod bmp;
-pub mod jpeg;
 
 #[derive(ValueEnum, Clone, Debug, Serialize)]
 pub enum ImageType {

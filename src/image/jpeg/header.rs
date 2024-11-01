@@ -1,14 +1,12 @@
+use anyhow::{bail, Result};
 use std::fmt;
 use std::fs::File;
 use std::io::Read;
 
-use anyhow::{bail, Result};
-
 use crate::image::bmp::header::BMPHeader;
-
+use crate::image::huffman::HuffmanTable;
+use crate::image::quantization_table::QuantizationTable;
 use super::color_component::ColorComponent;
-use super::huffman::HuffmanTable;
-use super::quantization_table::QuantizationTable;
 use super::segment::SegmentType;
 
 #[derive(Clone, Debug, Default)]
