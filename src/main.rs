@@ -1,10 +1,10 @@
 use anyhow::Result;
 use clap::Parser;
-use term_drawer::drawer::draw;
 use std::path::PathBuf;
 
-use image::{from_file, ImageType};
 use image::bmp::BMP;
+use image::{from_file, ImageType};
+use term_drawer::drawer::draw;
 
 mod image;
 mod term_drawer;
@@ -16,9 +16,21 @@ struct Args {
     /// File
     filepath: PathBuf,
 
-    /// File type
-    #[clap(default_value = "jpeg")]
-    filetype: Option<ImageType>,
+    /// Type of the file to process
+    #[clap(short, long, default_value="jpeg")]
+    image_type: ImageType,
+
+    /// Save intermediate BMP file
+    #[clap(short, long)]
+    save_bmp: bool,
+
+    /// Enable debug
+    #[clap(short, long)]
+    debug: bool,
+
+    /// Disable rendering
+    #[clap(short, long)]
+    no_render: bool,
 }
 
 // TODO: Be able to draw in the terminal (with colors)
@@ -31,18 +43,25 @@ struct Args {
 fn main() -> Result<()> {
     let args: Args = Args::parse();
     let filepath: PathBuf = args.filepath;
-    let image_type: ImageType = args.filetype.expect("Should not be None");
+    let image_type: ImageType = args.image_type;
+    let render: bool = !args.no_render;
+    let save_bmp: bool = args.save_bmp;
 
     assert!(filepath.exists());
     assert!(filepath.is_file());
 
     let bmp: BMP = from_file(&filepath, image_type)?.to_bmp()?;
-    // println!("{bmp}");
-    // let mut bmp_filepath = filepath.to_str().unwrap().to_owned();
-    // bmp_filepath.push_str(".bmp");
-    // bmp.write_to_file(PathBuf::from(bmp_filepath))?;
 
-    draw(bmp);
+    if save_bmp {
+        let mut bmp_filepath: String = filepath.to_str().unwrap().to_owned();
+        bmp_filepath.push_str(".bmp");
+        println!("Saving intermediate BMP file as \"{bmp_filepath}\"");
+        bmp.write_to_file(PathBuf::from(bmp_filepath))?;
+    }
+
+    if render {
+        draw(bmp);
+    }
 
     Ok(())
 }
