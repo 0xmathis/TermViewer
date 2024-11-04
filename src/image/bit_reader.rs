@@ -1,52 +1,46 @@
-pub struct BitReader<'a> {
-    next_bit: usize,
-    next_byte: usize,
-    data: &'a Vec<u8>,
-}
+use anyhow::Result;
+use std::fs::File;
+use std::io::{BufReader, Read};
 
-impl <'a> BitReader<'a> {
-    pub fn new(data: &'a Vec<u8>) -> Self {
-        Self {
-            next_bit: 0,
-            next_byte: 0,
-            data,
-        }
+pub trait BitReader {
+    fn new(stream: BufReader<File>) -> Self;
+    fn set_next_bit(&mut self, next_bit: usize) -> ();
+    fn stream(&mut self) -> &mut BufReader<File>;
+    fn read_bit(&mut self) -> Result<u8>;
+
+    fn read_byte(&mut self) -> Result<u8> {
+        self.set_next_bit(0);
+        let mut buffer: [u8; 1] = [0; 1];
+        self.stream().read_exact(&mut buffer)?;
+        Ok(buffer[0])
     }
 
-    pub fn read_bit(&mut self) -> Option<u8> {
-        if self.next_byte >= self.data.len() {
-            return None;
-        }
-
-        let bit: u8 = (self.data[self.next_byte] >> (7 - self.next_bit)) & 0x1;
-        self.next_bit += 1;
-
-        if self.next_bit == 8 {
-            self.next_bit = 0;
-            self.next_byte += 1;
-        }
-
-        Some(bit)
+    fn read_word(&mut self) -> Result<u16> {
+        self.set_next_bit(0);
+        let mut buffer: [u8; 2] = [0; 2];
+        self.stream().read_exact(&mut buffer)?;
+        Ok(((buffer[0] as u16) << 8) + buffer[1] as u16)
     }
 
-    pub fn read_bits(&mut self, length: usize) -> Option<i32> {
+    fn read_double(&mut self) -> Result<u32> {
+        self.set_next_bit(0);
+        let mut buffer: [u8; 4] = [0; 4];
+        self.stream().read_exact(&mut buffer)?;
+        Ok(((buffer[0] as u32) << 24) + ((buffer[1] as u32) << 16) + ((buffer[2] as u32) << 8) + buffer[3] as u32)
+    }
+
+    fn read_bits(&mut self, length: usize) -> Result<i32> {
         let mut bits: i32 = 0;
 
         for _ in 0..length {
-            if let Some(bit) = self.read_bit() {
-                bits = (bits << 1) | bit as i32;
-            } else {
-                return None;
-            }
+            let bit: u8 = self.read_bit()?;
+            bits = (bits << 1) | bit as i32;
         }
 
-        Some(bits)
+        Ok(bits)
     }
 
-    pub fn align(&mut self) -> () {
-        if self.next_byte < self.data.len() && self.next_bit != 0 {
-            self.next_bit = 0;
-            self.next_byte += 1;
-        }
+    fn align(&mut self) -> () {
+        self.set_next_bit(0);
     }
 }

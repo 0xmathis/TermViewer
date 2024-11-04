@@ -1,7 +1,9 @@
 use anyhow::Result;
 use std::fmt;
-use std::fs::File;
-use std::io::Read;
+
+use crate::image::bit_reader::BitReader;
+
+use super::bmp_bit_reader::BmpBitReader;
 
 #[derive(Clone, Debug, Default)]
 pub struct BMPHeader {
@@ -15,47 +17,36 @@ pub struct BMPHeader {
 }
 
 impl BMPHeader {
-    pub fn from_binary(file: &mut File) -> Result<Self> {
+    pub fn from_binary(reader: &mut BmpBitReader) -> Result<Self> {
         let mut header: BMPHeader = BMPHeader::default();
-        let mut buffer2: [u8; 2] = [0; 2];
-        let mut buffer4: [u8; 4] = [0; 4];
         let mut count: u32 = 0;
 
-        file.read_exact(&mut buffer2)?;
-        assert_eq!([b'B', b'M'], buffer2);
+        assert_eq!(0x424D, reader.read_word()?);
         count += 2;
 
-        file.read_exact(&mut buffer4)?;
-        header.bmp_size = ((buffer4[3] as u32) << 24) + ((buffer4[2] as u32) << 16) + ((buffer4[1] as u32) << 8) + buffer4[0] as u32;
+        header.bmp_size = reader.read_double()?.swap_bytes();
         count += 4;
 
-        file.read_exact(&mut buffer4)?;
-        assert_eq!([0; 4], buffer4);
+        assert_eq!(0u32, reader.read_double()?);
         count += 4;
 
-        file.read_exact(&mut buffer4)?;
-        header.starting_offset = ((buffer4[3] as u32) << 24) + ((buffer4[2] as u32) << 16) + ((buffer4[1] as u32) << 8) + buffer4[0] as u32;
+        header.starting_offset = reader.read_double()?.swap_bytes();
         count += 4;
 
-        file.read_exact(&mut buffer4)?;
-        header.header_size = ((buffer4[3] as u32) << 24) + ((buffer4[2] as u32) << 16) + ((buffer4[1] as u32) << 8) + buffer4[0] as u32;
+        header.header_size = reader.read_double()?.swap_bytes();
         count += 4;
 
-        file.read_exact(&mut buffer2)?;
-        header.width = ((buffer2[1] as u16) << 8) + buffer2[0] as u16;
+        header.width = reader.read_word()?.swap_bytes();
         count += 2;
 
-        file.read_exact(&mut buffer2)?;
-        header.height = ((buffer2[1] as u16) << 8) + buffer2[0] as u16;
+        header.height = reader.read_word()?.swap_bytes();
         count += 2;
 
-        file.read_exact(&mut buffer2)?;
-        header.components_number = ((buffer2[1] as u16) << 8) + buffer2[0] as u16;
+        header.components_number = reader.read_word()?.swap_bytes();
         assert_eq!(1u16, header.components_number);
         count += 2;
 
-        file.read_exact(&mut buffer2)?;
-        header.bits_per_pixel = ((buffer2[1] as u16) << 8) + buffer2[0] as u16;
+        header.bits_per_pixel = reader.read_word()?.swap_bytes();
         count += 2;
 
         assert_eq!(header.starting_offset, count);

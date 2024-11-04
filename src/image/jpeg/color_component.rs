@@ -1,6 +1,7 @@
 use std::fmt::Display;
-use std::fs::File;
-use std::io::Read;
+use anyhow::Result;
+
+use crate::image::bit_reader::BitReader;
 
 #[derive(Debug, Clone)]
 pub struct ColorComponent {
@@ -14,15 +15,11 @@ pub struct ColorComponent {
 }
 
 impl ColorComponent {
-    pub fn from_binary(&mut self, file: &mut File) -> usize {
+    pub fn from_binary(&mut self, reader: &mut impl BitReader) -> Result<()> {
         assert_eq!(false, self.used_frame);
 
-        let mut buffer: [u8; 1] = [0; 1];
-        file.read_exact(&mut buffer).unwrap();
-        let sampling_factor: u8 = buffer[0];
-
-        file.read_exact(&mut buffer).unwrap();
-        let quantization_table_id: u8 = buffer[0];
+        let sampling_factor: u8 = reader.read_byte()?;
+        let quantization_table_id: u8 = reader.read_byte()?;
         assert!(quantization_table_id <= 3);
 
         self.horizontal_sampling_factor = (sampling_factor >> 4) & 0x0F;
@@ -30,7 +27,7 @@ impl ColorComponent {
         self.quantization_table_id = quantization_table_id;
         self.used_frame = true;
 
-        3
+        Ok(())
     }
 
     pub fn set_huffman_ac_table_id(&mut self, id: u8) -> () {

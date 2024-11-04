@@ -1,12 +1,12 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 use std::f32::consts::PI;
 use std::fmt;
 use std::fs::File;
-use std::io::Read;
+use std::io::BufReader;
 
 use color_component::ColorComponent;
 use header::JPEGHeader;
-use segment::SegmentType;
+use jpeg_bit_reader::JpegBitReader;
 use super::Image;
 use super::bit_reader::BitReader;
 use super::bmp::BMP;
@@ -14,50 +14,18 @@ use super::mcu::MCU;
 use super::quantization_table::QuantizationTable;
 
 mod color_component;
-mod segment;
 mod header;
+mod jpeg_bit_reader;
+mod segment;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct JPEG {
     header: JPEGHeader,
-    huffman_data: Vec<u8>,
     mcus: Vec<MCU>,
+    reader: JpegBitReader,
 }
 
 impl JPEG {
-    fn read_huffman_data(file: &mut File) -> Result<Vec<u8>> {
-        let mut huffman_data: Vec<u8> = Vec::new();
-        let mut current: [u8; 1] = [0; 1];
-        let mut previous: [u8; 1];
-
-        file.read_exact(&mut current).unwrap();
-
-        loop {
-            previous = current;
-            file.read_exact(&mut current).unwrap();
-
-            // marker is found
-            if previous == [0xFF] {
-                if SegmentType::from_marker([0xFF, current[0]]) == Some(SegmentType::EOI) {
-                    break;
-                } else if current == [0x00] { // 0xFF00 mean 0xFF is data from huffman stream
-                    huffman_data.push(previous[0]);
-                    file.read_exact(&mut current).unwrap();
-                } else if SegmentType::from_marker([0xFF, current[0]]) == Some(SegmentType::RSTN) {
-                    file.read_exact(&mut current).unwrap();
-                } else if current == [0xFF] { // ignore multiple 0xFF in a row
-                    continue;
-                } else {
-                    bail!("Invalid marker during compressed data scan: 0xFF{}", current[0]);
-                }
-            } else {
-                huffman_data.push(previous[0]);
-            }
-        }
-
-        Ok(huffman_data)
-    }
-
     fn huffman_decode(&mut self) -> Result<()> {
         let header: &mut JPEGHeader = &mut self.header;
 
@@ -78,19 +46,22 @@ impl JPEG {
                 .generate_codes();
             }
 
-        let mut bit_reader: BitReader = BitReader::new(&self.huffman_data);
         let mut previous_dcs: [i32; 3] = [0; 3];
 
         // Refactor these loops ?
         for i in 0..mcu_height*mcu_width {
-            for j in 0..header.components_number as usize{
-                if header.restart_interval != 0 && i % header.restart_interval as usize == 0 {
-                    previous_dcs[0] = 0;
-                    previous_dcs[1] = 0;
-                    previous_dcs[2] = 0;
-                    bit_reader.align();
-                }
+            if header.restart_interval != 0 && i % header.restart_interval as usize == 0 {
+                previous_dcs[0] = 0;
+                previous_dcs[1] = 0;
+                previous_dcs[2] = 0;
+                self.reader.align();
+            }
 
+            let mcu: &mut MCU = self.mcus
+                .get_mut(i)
+                .expect("Should not panic");
+
+            for j in 0..header.components_number as usize{
                 let ac_table_id: usize = header
                     .color_components[j]
                     .huffman_ac_table_id as usize;
@@ -104,15 +75,7 @@ impl JPEG {
                     .get_mut(j)
                     .expect("Should not panic");
 
-                let result: bool = self.mcus
-                    .get_mut(i)
-                    .expect("Should not panic")
-                    .decode(j, &mut bit_reader, previous_dc, ac_table, dc_table);
-
-                if !result {
-                    // return Ok(());
-                    bail!("Decoding MCU {} failed", j);
-                }
+                mcu.decode(j, &mut self.reader, previous_dc, ac_table, dc_table)?;
             }
         }
 
@@ -219,11 +182,13 @@ impl JPEG {
 }
 
 impl Image for JPEG {
-    fn from_file(mut file: File) -> Result<Self> {
+    fn from_stream(stream: BufReader<File>) -> Result<Self> {
+        let mut reader: JpegBitReader = JpegBitReader::new(stream);
+
         Ok(Self {
-            header: JPEGHeader::from_binary(&mut file)?,
-            huffman_data: Self::read_huffman_data(&mut file)?,
+            header: JPEGHeader::from_binary(&mut reader)?,
             mcus: Vec::new(),
+            reader,
         })
     }
 
@@ -251,7 +216,6 @@ impl Image for JPEG {
 
 impl fmt::Display for JPEG {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Header:\n\n{}\n", self.header)?;
-        write!(f, "Huffman data length: {}\n", self.huffman_data.len())
+        write!(f, "Header:\n\n{}\n", self.header)
     }
 }

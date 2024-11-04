@@ -1,6 +1,7 @@
 use std::fmt::Display;
-use std::fs::File;
-use std::io::Read;
+use anyhow::Result;
+
+use super::bit_reader::BitReader;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct QuantizationTable {
@@ -13,25 +14,20 @@ impl QuantizationTable {
         self.table[index]
     }
 
-    pub fn from_binary(&mut self, file: &mut File, table_id: u8, element_size: u8) -> usize {
-            self.table_id = table_id;
-            let mut buffer: Vec<u8> = Vec::new();
+    pub fn from_binary(&mut self, reader: &mut impl BitReader, table_id: u8, element_size: u8) -> Result<usize> {
+        self.table_id = table_id;
 
-            if element_size == 0 {
-                buffer.resize(1, 0);
-                for i in Self::zigzag_map().into_iter() {
-                    file.read_exact(&mut buffer).unwrap();
-                    self.table[i] = buffer[0] as u16;
-                }
-            } else {
-                buffer.resize(2, 0);
-                for i in Self::zigzag_map().into_iter() {
-                    file.read_exact(&mut buffer).unwrap();
-                    self.table[i] = ((buffer[0] as u16) << 8) + buffer[1] as u16;
-                }
+        if element_size == 0 {
+            for i in Self::zigzag_map().into_iter() {
+                self.table[i] = reader.read_byte()? as u16;
             }
+        } else {
+            for i in Self::zigzag_map().into_iter() {
+                self.table[i] = reader.read_word()?;
+            }
+        }
 
-            self.table.len()
+        Ok(self.table.len())
     }
 
     fn zigzag_map() -> [usize; 64] {

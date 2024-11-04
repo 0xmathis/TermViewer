@@ -19,25 +19,25 @@ pub enum SegmentType {
 }
 
 impl SegmentType {
-    pub fn from_marker(marker: [u8; 2]) -> Option<Self> {
+    pub fn from_marker(marker: u16) -> Option<Self> {
         match marker {
-            [0xff, 0x01]        => Some(SegmentType::TEM),
-            [0xff, 0xc0]        => Some(SegmentType::SOF0),
-            [0xff, 0xc4]        => Some(SegmentType::DHT),
-            [0xff, 0xcc]        => Some(SegmentType::DAC),
-            [0xff, 0xd0..=0xd7] => Some(SegmentType::RSTN),
-            [0xff, 0xd8]        => Some(SegmentType::SOI),
-            [0xff, 0xd9]        => Some(SegmentType::EOI),
-            [0xff, 0xda]        => Some(SegmentType::SOS),
-            [0xff, 0xdb]        => Some(SegmentType::DQT),
-            [0xff, 0xdc]        => Some(SegmentType::DNL),
-            [0xff, 0xdd]        => Some(SegmentType::DRI),
-            [0xff, 0xde]        => Some(SegmentType::DHP),
-            [0xff, 0xdf]        => Some(SegmentType::EXP),
-            [0xff, 0xe0..=0xef] => Some(SegmentType::APPN),
-            [0xff, 0xf0..=0xfd] => Some(SegmentType::JPGN),
-            [0xff, 0xfe]        => Some(SegmentType::COM),
-            _                   => None,
+            0xFF01          => Some(SegmentType::TEM),
+            0xFFC0          => Some(SegmentType::SOF0),
+            0xFFC4          => Some(SegmentType::DHT),
+            0xFFCC          => Some(SegmentType::DAC),
+            0xFFD0..=0xFFD7 => Some(SegmentType::RSTN),
+            0xFFD8          => Some(SegmentType::SOI),
+            0xFFD9          => Some(SegmentType::EOI),
+            0xFFDA          => Some(SegmentType::SOS),
+            0xFFDB          => Some(SegmentType::DQT),
+            0xFFDC          => Some(SegmentType::DNL),
+            0xFFDD          => Some(SegmentType::DRI),
+            0xFFDE          => Some(SegmentType::DHP),
+            0xFFDF          => Some(SegmentType::EXP),
+            0xFFE0..=0xFFEF => Some(SegmentType::APPN),
+            0xFFF0..=0xFFFD => Some(SegmentType::JPGN),
+            0xFFFE          => Some(SegmentType::COM),
+            _               => None,
         }
     }
 }

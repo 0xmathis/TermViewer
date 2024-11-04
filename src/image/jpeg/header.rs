@@ -1,12 +1,12 @@
 use anyhow::{bail, Result};
 use std::fmt;
-use std::fs::File;
-use std::io::Read;
 
+use crate::image::bit_reader::BitReader;
 use crate::image::bmp::header::BMPHeader;
 use crate::image::huffman::HuffmanTable;
 use crate::image::quantization_table::QuantizationTable;
 use super::color_component::ColorComponent;
+use super::jpeg_bit_reader::JpegBitReader;
 use super::segment::SegmentType;
 
 #[derive(Clone, Debug, Default)]
@@ -45,17 +45,16 @@ impl JPEGHeader {
         }
     }
 
-    pub fn from_binary(file: &mut File) -> Result<Self> {
+    pub fn from_binary(reader: &mut JpegBitReader) -> Result<Self> {
         let mut header: JPEGHeader = JPEGHeader::default();
-        let mut marker: [u8; 2] = [0; 2];
+        let mut marker: u16 = reader.read_word()?;
 
-        file.read_exact(&mut marker).unwrap();
         if SegmentType::from_marker(marker) != Some(SegmentType::SOI) {
             bail!("JPEG file start with SOI marker");
         };
 
         loop {
-            file.read_exact(&mut marker).unwrap();
+            marker = reader.read_word()?;
 
             let Some(marker) = SegmentType::from_marker(marker) else {
                 bail!("marker {marker:02X?}: unknown");
@@ -64,78 +63,72 @@ impl JPEGHeader {
             println!("segment {marker:?}");
 
             match marker {
-                SegmentType::APPN => header.read_segment_appn(file),
+                SegmentType::APPN => header.read_segment_appn(reader)?,
                 SegmentType::COM |
                 SegmentType::DHP |
                 SegmentType::DNL |
                 SegmentType::EXP |
-                SegmentType::JPGN => header.read_comment(file),
-                SegmentType::DHT => header.read_segment_dht(file),
-                SegmentType::DQT => header.read_segment_dqt(file),
-                SegmentType::DRI => header.read_segment_dri(file),
-                SegmentType::SOF0 => header.read_segment_sof0(file),
-                SegmentType::SOS => {
-                    header.read_segment_sos(file);
+                SegmentType::JPGN => header.read_comment(reader)?,
+                SegmentType::DHT  => header.read_segment_dht(reader)?,
+                SegmentType::DQT  => header.read_segment_dqt(reader)?,
+                SegmentType::DRI  => header.read_segment_dri(reader)?,
+                SegmentType::SOF0 => header.read_segment_sof0(reader)?,
+                SegmentType::SOS  => {
+                    header.read_segment_sos(reader)?;
                     break;
                 },
-                SegmentType::TEM => {},
-                SegmentType::DAC => bail!("Arithmetic Coding mode not supported"),
-                SegmentType::EOI => bail!("Should not encounter EOI marker before SOS marker"),
+                SegmentType::TEM  => (),
+                SegmentType::DAC  => bail!("Arithmetic Coding mode not supported"),
+                SegmentType::EOI  => bail!("Should not encounter EOI marker before SOS marker"),
                 SegmentType::RSTN => bail!("Should not encounter RSTN marker before SOS marker"),
-                SegmentType::SOI => bail!("Embedded JPEG not supported"),
+                SegmentType::SOI  => bail!("Embedded JPEG not supported"),
             }
         }
 
         Ok(header)
     }
 
-    fn read_segment_appn(&mut self, file: &mut File) -> () {
-        let mut buffer2: [u8; 2] = [0; 2];
-
-        file.read_exact(&mut buffer2).unwrap();
-        let length: u16 = ((buffer2[0] as u16) << 8) + buffer2[1] as u16;
+    fn read_segment_appn(&mut self, reader: &mut JpegBitReader) -> Result<()> {
+        let length: u16 = reader.read_word()?;
         assert!(length >= 2);
 
         let mut count: i32 = length as i32;
         count -= 2;
 
-        let mut data: Vec<u8> = Vec::new();
-        data.resize(count as usize, 0);
-        file.read_exact(&mut data).unwrap();
+        for _ in 0..count {
+            reader.read_byte()?;
+        }
         count -= count;
 
         assert_eq!(0, count);
+
+        Ok(())
     }
 
-    fn read_comment(&mut self, file: &mut File) -> () {
-        let mut buffer2: [u8; 2] = [0; 2];
-        file.read_exact(&mut buffer2).unwrap();
-        let length: u16 = ((buffer2[0] as u16) << 8) + buffer2[1] as u16;
+    fn read_comment(&mut self, reader: &mut JpegBitReader) -> Result<()> {
+        let length: u16 = reader.read_word()?;
         assert!(length >= 2);
 
         let mut count: i32 = length as i32;
         count -= 2;
 
-        let mut data: Vec<u8> = Vec::new();
-        data.resize(count as usize, 0);
-        file.read_exact(&mut data).unwrap();
+        for _ in 0..count {
+            reader.read_byte()?;
+        }
         count -= count;
 
         assert_eq!(0, count);
+
+        Ok(())
     }
 
-    fn read_segment_dht(&mut self, file: &mut File) -> () {
-        let mut buffer1: [u8; 1] = [0; 1];
-        let mut buffer2: [u8; 2] = [0; 2];
-
-        file.read_exact(&mut buffer2).unwrap();
-        let length: u16 = ((buffer2[0] as u16) << 8) + buffer2[1] as u16;
+    fn read_segment_dht(&mut self, reader: &mut JpegBitReader) -> Result<()> {
+        let length: u16 = reader.read_word()?;
         let mut count: i32 = length as i32;
         count -= 2;
 
         while count > 0 {
-            file.read_exact(&mut buffer1).unwrap();
-            let table_infos: u8 = buffer1[0];
+            let table_infos: u8 = reader.read_byte()?;
 
             let table_id: u8 = table_infos & 0x0F;
             let is_ac_table: bool = (table_infos >> 4) & 0x0F == 1;
@@ -147,32 +140,29 @@ impl JPEGHeader {
                 len = self.ac_tables
                     .get_mut(table_id as usize)
                     .expect("Should not panic")
-                    .from_binary(file, table_id, is_ac_table);
+                    .from_binary(reader, table_id, is_ac_table)?;
             } else {
                 len = self.dc_tables
                     .get_mut(table_id as usize)
                     .expect("Should not panic")
-                    .from_binary(file, table_id, is_ac_table);
+                    .from_binary(reader, table_id, is_ac_table)?;
             }
 
             count -= len as i32;
         }
 
         assert_eq!(0, count);
+
+        Ok(())
     }
 
-    fn read_segment_dqt(&mut self, file: &mut File) -> () {
-        let mut buffer1: [u8; 1] = [0; 1];
-        let mut buffer2: [u8; 2] = [0; 2];
-
-        file.read_exact(&mut buffer2).unwrap();
-        let length: u16 = ((buffer2[0] as u16) << 8) + buffer2[1] as u16;
+    fn read_segment_dqt(&mut self, reader: &mut JpegBitReader) -> Result<()> {
+        let length: u16 = reader.read_word()?;
         let mut count: i32 = length as i32;
         count -= 2;
         
         while count > 0 {
-            file.read_exact(&mut buffer1).unwrap();
-            let table_infos: u8 = buffer1[0];
+            let table_infos: u8 = reader.read_byte()?;
             count -= 1;
 
             let table_id: u8 = table_infos & 0x0F;
@@ -183,65 +173,57 @@ impl JPEGHeader {
             let len: usize = self.quantization_tables
                 .get_mut(table_id as usize)
                 .expect("Should not panic because vec initialized")
-                .from_binary(file, table_id, element_size);
+                .from_binary(reader, table_id, element_size)?;
             count -= len as i32;
         }
 
         assert_eq!(0, count);
+
+        Ok(())
     }
 
-    fn read_segment_dri(&mut self, file: &mut File) -> () {
-        let mut buffer2: [u8; 2] = [0; 2];
-
-        file.read_exact(&mut buffer2).unwrap();
-        let length: u16 = ((buffer2[0] as u16) << 8) + buffer2[1] as u16;
+    fn read_segment_dri(&mut self, reader: &mut JpegBitReader) -> Result<()> {
+        let length: u16 = reader.read_word()?;
         assert_eq!(4, length);
         let mut count: i32 = length as i32;
         count -= 2;
 
-        file.read_exact(&mut buffer2).unwrap();
-        self.restart_interval = ((buffer2[0] as u16) << 8) + buffer2[1] as u16;
+        self.restart_interval = reader.read_word()?;
         count -= 2;
 
         assert_eq!(0, count);
+
+        Ok(())
     }
 
-    fn read_segment_sof0(&mut self, file: &mut File) -> () {
-        let mut buffer1: [u8; 1] = [0; 1];
-        let mut buffer2: [u8; 2] = [0; 2];
-
-        file.read_exact(&mut buffer2).unwrap();
-        let length: u16 = ((buffer2[0] as u16) << 8) + buffer2[1] as u16;
+    fn read_segment_sof0(&mut self, reader: &mut JpegBitReader) -> Result<()> {
+                
+        let length: u16 = reader.read_word()?;
         let mut count: i32 = length as i32;
         count -= 2;
 
-        file.read_exact(&mut buffer1).unwrap();
-        let precision: u8 = buffer1[0];
+        let precision: u8 = reader.read_byte()?;
         assert_eq!(8, precision);
         count -= 1;
 
-        file.read_exact(&mut buffer2).unwrap();
-        let height: u16 = ((buffer2[0] as u16) << 8) + buffer2[1] as u16;
+        let height: u16 = reader.read_word()?;
         assert_ne!(0, height);
         self.height = height;
         count -= 2;
 
-        file.read_exact(&mut buffer2).unwrap();
-        let width: u16 = ((buffer2[0] as u16) << 8) + buffer2[1] as u16;
+        let width: u16 = reader.read_word()?;
         assert_ne!(0, width);
         self.width = width;
         count -= 2;
 
-        file.read_exact(&mut buffer1).unwrap();
-        let component_numbers: u8 = buffer1[0];
+        let component_numbers: u8 = reader.read_byte()?;
         assert!(component_numbers == 1 || component_numbers == 3);
         count -= 1;
 
         let mut zero_based: bool = false;
 
         for i in 0..component_numbers {
-            file.read_exact(&mut buffer1).unwrap();
-            let mut component_id: u8 = buffer1[0];
+            let mut component_id: u8 = reader.read_byte()?;
             assert!(component_id <= 3);
 
             if component_id == 0 && i == 0 {
@@ -255,27 +237,25 @@ impl JPEGHeader {
             assert_ne!(0, component_id);
             assert!(component_id <= component_numbers);
 
-            let len: usize = self.color_components
+            self.color_components
                 .get_mut((component_id - 1) as usize)
                 .expect("Should not panic because vec initialized")
-                .from_binary(file);
-            count -= len as i32;
+                .from_binary(reader)?;
+            count -= 3;
         }
 
         self.components_number = component_numbers;
         self.zero_based = zero_based;
 
         assert_eq!(0, count);
+
+        Ok(())
     }
 
-    fn read_segment_sos(&mut self, file: &mut File) -> () {
+    fn read_segment_sos(&mut self, reader: &mut JpegBitReader) -> Result<()> {
         assert_ne!(0, self.components_number);
 
-        let mut buffer1: [u8; 1] = [0; 1];
-        let mut buffer2: [u8; 2] = [0; 2];
-
-        file.read_exact(&mut buffer2).unwrap();
-        let length: u16 = ((buffer2[0] as u16) << 8) + buffer2[1] as u16;
+        let length: u16 = reader.read_word()?;
         let mut count: i32 = length as i32;
         count -= 2;
 
@@ -283,13 +263,11 @@ impl JPEGHeader {
             component.used_scan = false;
         }
 
-        file.read_exact(&mut buffer1).unwrap();
-        let components_number: u8 = buffer1[0];
+        let components_number: u8 = reader.read_byte()?;
         count -= 1;
 
         for _ in 0..components_number {
-            file.read_exact(&mut buffer1).unwrap();
-            let mut component_id: u8 = buffer1[0];
+            let mut component_id: u8 = reader.read_byte()?;
             count -= 1;
 
             if self.zero_based {
@@ -306,8 +284,7 @@ impl JPEGHeader {
             assert_eq!(false, color_component.used_scan);
             color_component.used_scan = true;
 
-            file.read_exact(&mut buffer1).unwrap();
-            let huffman_table_ids: u8 = buffer1[0];
+            let huffman_table_ids: u8 = reader.read_byte()?;
             count -= 1;
 
             let huffman_ac_table_id: u8 = huffman_table_ids & 0x0F;
@@ -320,21 +297,19 @@ impl JPEGHeader {
             color_component.set_huffman_dc_table_id(huffman_dc_table_id);
         }
 
-        file.read_exact(&mut buffer1).unwrap();
-        let start_of_selection: u8 = buffer1[0];
+        let start_of_selection: u8 = reader.read_byte()?;
         assert_eq!(0, start_of_selection);
         self.start_of_selection = start_of_selection;
         count -= 1;
 
-        file.read_exact(&mut buffer1).unwrap();
-        let end_of_selection: u8 = buffer1[0];
+        let end_of_selection: u8 = reader.read_byte()?;
         assert_eq!(63, end_of_selection);
         self.end_of_selection = end_of_selection;
         count -= 1;
 
-        file.read_exact(&mut buffer1).unwrap();
-        let successive_approximation_low: u8 = buffer1[0] & 0x0F;
-        let successive_approximation_high: u8 = (buffer1[0] >> 4) & 0x0F;
+        let successive_approximation: u8 = reader.read_byte()?;
+        let successive_approximation_low: u8 = successive_approximation & 0x0F;
+        let successive_approximation_high: u8 = (successive_approximation >> 4) & 0x0F;
         assert_eq!(0, successive_approximation_low);
         assert_eq!(0, successive_approximation_high);
         self.successive_approximation_low = successive_approximation_low;
@@ -342,6 +317,8 @@ impl JPEGHeader {
         count -= 1;
 
         assert_eq!(0, count);
+
+        Ok(())
     }
 }
 

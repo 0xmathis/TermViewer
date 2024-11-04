@@ -1,6 +1,8 @@
 use std::fmt::Display;
-use std::fs::File;
-use std::io::Read;
+
+use anyhow::Result;
+
+use super::bit_reader::BitReader;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct HuffmanTable {
@@ -38,28 +40,25 @@ impl HuffmanTable {
         self.codes[index]
     }
 
-    pub fn from_binary(&mut self, file: &mut File, table_id: u8, is_ac_table: bool) -> usize {
+    pub fn from_binary(&mut self, reader: &mut impl BitReader, table_id: u8, is_ac_table: bool) -> Result<usize> {
         self.symbols[0] = 0;
         self.table_id = table_id;
         self.is_ac_table = is_ac_table;
         self.is_set = true;
 
         let mut symbols_count: usize = 0;
-        let mut buffer: [u8; 1] = [0; 1];
 
         for i in 1..17 {
-            file.read_exact(&mut buffer).unwrap();
-            symbols_count += buffer[0] as usize;
+            symbols_count += reader.read_byte()? as usize;
             assert!(symbols_count <= 162);
             self.offsets[i] = symbols_count as u8;
         }
 
         for i in 0..symbols_count {
-            file.read_exact(&mut buffer).unwrap();
-            self.symbols[i as usize] = buffer[0];
+            self.symbols[i as usize] = reader.read_byte()?;
         }
 
-        17 + symbols_count
+        Ok(17 + symbols_count)
     }
 
     pub fn generate_codes(&mut self) -> () {

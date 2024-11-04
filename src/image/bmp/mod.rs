@@ -1,13 +1,16 @@
 use anyhow::Result;
-use header::BMPHeader;
 use std::fmt;
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::{BufReader, Write};
 use std::path::PathBuf;
 
+use bmp_bit_reader::BmpBitReader;
+use crate::image::bit_reader::BitReader;
+use header::BMPHeader;
 use super::Image;
 use super::mcu::MCU;
 
+mod bmp_bit_reader;
 pub mod header;
 
 #[derive(Clone, Debug)]
@@ -69,8 +72,7 @@ impl BMP {
         Ok(())
     }
 
-    fn read_components(&mut self, file: &mut File) -> Result<()> {
-        let mut buffer: [u8; 1] = [0; 1];
+    fn read_components(&mut self, reader: &mut BmpBitReader) -> Result<()> {
         let mut count: u32 = 0;
 
         let padding_size: u32 = (self.header.width % 4) as u32;
@@ -89,21 +91,27 @@ impl BMP {
                 let mcu_index: usize = (mcu_row * mcu_width + mcu_column) as usize;
                 let pixel_index: usize = (pixel_row * 8 + pixel_column) as usize;
 
-                file.read_exact(&mut buffer)?;
-                self.mcus[mcu_index].component_mut(2).expect("Should exist")[pixel_index] = buffer[0] as i32;
+                self.mcus[mcu_index]
+                    .component_mut(2)
+                    .expect("Should exist")
+                    [pixel_index] = reader.read_byte()? as i32;
                 count += 1;
 
-                file.read_exact(&mut buffer)?;
-                self.mcus[mcu_index].component_mut(1).expect("Should exist")[pixel_index] = buffer[0] as i32;
+                self.mcus[mcu_index]
+                    .component_mut(1)
+                    .expect("Should exist")
+                    [pixel_index] = reader.read_byte()? as i32;
                 count += 1;
 
-                file.read_exact(&mut buffer)?;
-                self.mcus[mcu_index].component_mut(0).expect("Should exist")[pixel_index] = buffer[0] as i32;
+                self.mcus[mcu_index]
+                    .component_mut(0)
+                    .expect("Should exist")
+                    [pixel_index] = reader.read_byte()? as i32;
                 count += 1;
             }
 
             for _ in 0..padding_size {
-                file.read_exact(&mut buffer)?;
+                reader.read_byte()?;
                 count += 1;
             }
         }
@@ -115,13 +123,14 @@ impl BMP {
 }
 
 impl Image for BMP {
-    fn from_file(mut file: File) -> Result<Self> {
+    fn from_stream(stream: BufReader<File>) -> Result<Self> {
+        let mut reader: BmpBitReader = BmpBitReader::new(stream);
         let mut bmp: Self = Self {
-            header: BMPHeader::from_binary(&mut file)?,
+            header: BMPHeader::from_binary(&mut reader)?,
             mcus: Vec::new(),
         };
 
-        bmp.read_components(&mut file)?;
+        bmp.read_components(&mut reader)?;
 
         Ok(bmp)
     }
