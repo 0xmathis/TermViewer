@@ -1,12 +1,12 @@
-use std::u16;
+use std::io::{stdout, Stdout, Write};
 
-use terminal_size::{Width, Height, terminal_size};
-
-use crate::image::mcu::MCU;
 use crate::image::Image;
 use crate::image::bmp::BMP;
+use crate::image::mcu::MCU;
+use anyhow::Result;
+use terminal_size::{Width, Height, terminal_size};
 
-pub fn level1(image: &BMP, terminal_width: usize, terminal_height: usize) -> () {
+pub fn level1(image: &BMP, terminal_width: usize, terminal_height: usize) -> Result<()> {
     let image_height: usize = image.height() as usize;
     let image_width: usize = image.width() as usize;
     let mcus: &Vec<MCU> = image.mcus();
@@ -55,8 +55,8 @@ pub fn level1(image: &BMP, terminal_width: usize, terminal_height: usize) -> () 
     }
 
     output += &reset();
-    println!("cap: {} ; len: {}", output.capacity(), output.len());
     // print!("{output}");
+    Ok(stdout().write_all(output.as_bytes())?)
 }
 
 // pub fn level2(image: BMP, terminal_width: u16, terminal_height: u16) -> () {
@@ -67,16 +67,17 @@ pub fn level1(image: &BMP, terminal_width: usize, terminal_height: usize) -> () 
 //     todo!();
 // }
 
-pub fn draw(image: BMP) -> () {
+pub fn draw(image: BMP) -> Result<()> {
     clean();
     hide_cursor();
 
     if let Some((Width(width), Height(height))) = terminal_size() {
-        level1(&image, width as usize, height as usize);
+        level1(&image, width as usize, height as usize)?;
     }
 
     println!("");
     show_cursor();
+    Ok(())
 }
 
 fn background(r: u8, g: u8, b: u8) -> String {
