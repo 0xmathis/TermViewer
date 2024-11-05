@@ -7,11 +7,11 @@ use crate::image::bit_reader::BitReader;
 pub struct ColorComponent {
     horizontal_sampling_factor: u8,
     vertical_sampling_factor: u8,
-    pub quantization_table_id: u8,
-    pub huffman_ac_table_id: u8,
-    pub huffman_dc_table_id: u8,
-    pub used_scan: bool,
-    pub used_frame: bool,
+    quantization_table_id: u8,
+    huffman_ac_table_id: u8,
+    huffman_dc_table_id: u8,
+    used_scan: bool,
+    used_frame: bool,
 }
 
 impl ColorComponent {
@@ -36,6 +36,30 @@ impl ColorComponent {
 
     pub fn set_huffman_dc_table_id(&mut self, id: u8) -> () {
         self.huffman_dc_table_id = id;
+    }
+
+    pub fn quantization_table_id(&self) -> u8 {
+        self.quantization_table_id
+    }
+
+    pub fn huffman_ac_table_id(&self) -> u8 {
+        self.huffman_ac_table_id
+    }
+
+    pub fn huffman_dc_table_id(&self) -> u8 {
+        self.huffman_dc_table_id
+    }
+
+    pub fn set_used_scan(&mut self, used_scan: bool) -> () {
+        self.used_scan = used_scan;
+    }
+
+    pub fn used_scan(&self) -> bool {
+        self.used_scan
+    }
+
+    pub fn used_frame(&self) -> bool {
+        self.used_frame
     }
 }
 

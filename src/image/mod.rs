@@ -27,8 +27,6 @@ pub enum ImageType {
 pub trait Image {
     fn from_stream(reader: BufReader<File>) -> Result<Self> where Self: Sized;
     fn to_bmp(&mut self) -> Result<BMP>;
-    fn width(&self) -> u16;
-    fn height(&self) -> u16;
     fn mcus(&self) -> &Vec<MCU>;
 }
 

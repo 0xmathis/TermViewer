@@ -11,22 +11,22 @@ use super::segment::SegmentType;
 
 #[derive(Clone, Debug, Default)]
 pub struct JPEGHeader {
-    pub quantization_tables: [QuantizationTable; 4],
-    pub ac_tables: [HuffmanTable; 4],
-    pub dc_tables: [HuffmanTable; 4],
-    pub color_components: [ColorComponent; 3],
+    quantization_tables: [QuantizationTable; 4],
+    ac_tables: [HuffmanTable; 4],
+    dc_tables: [HuffmanTable; 4],
+    color_components: [ColorComponent; 3],
 
-    pub height: u16,
-    pub width: u16,
-    pub components_number: u8,
-    pub zero_based: bool,
+    height: u16,
+    width: u16,
+    components_number: u8,
+    zero_based: bool,
 
-    pub start_of_selection: u8,
-    pub end_of_selection: u8,
-    pub successive_approximation_high: u8,
-    pub successive_approximation_low: u8,
+    start_of_selection: u8,
+    end_of_selection: u8,
+    successive_approximation_high: u8,
+    successive_approximation_low: u8,
 
-    pub restart_interval: u16,
+    restart_interval: u16,
 }
 
 impl JPEGHeader {
@@ -260,7 +260,7 @@ impl JPEGHeader {
         count -= 2;
 
         for component in self.color_components.iter_mut() {
-            component.used_scan = false;
+            component.set_used_scan(false);
         }
 
         let components_number: u8 = reader.read_byte()?;
@@ -280,9 +280,9 @@ impl JPEGHeader {
                 .get_mut(component_id as usize - 1usize)
                 .expect("Should not panic");
 
-            assert_eq!(true, color_component.used_frame);
-            assert_eq!(false, color_component.used_scan);
-            color_component.used_scan = true;
+            assert_eq!(true, color_component.used_frame());
+            assert_eq!(false, color_component.used_scan());
+            color_component.set_used_scan(true);
 
             let huffman_table_ids: u8 = reader.read_byte()?;
             count -= 1;
@@ -319,6 +319,52 @@ impl JPEGHeader {
         assert_eq!(0, count);
 
         Ok(())
+    }
+
+    pub fn quantization_tables(&self, index: usize) -> Option<&QuantizationTable> {
+        self.quantization_tables.get(index)
+    }
+
+    pub fn ac_table(&self, index: usize) -> Option<&HuffmanTable> {
+        self.ac_tables.get(index)
+    }
+
+    pub fn dc_table(&self, index: usize) -> Option<&HuffmanTable> {
+        self.dc_tables.get(index)
+    }
+
+    pub fn generate_tables_codes(&mut self) -> () {
+        for i in 0..4 {
+            self.ac_tables
+                .get_mut(i)
+                .expect("Should not panic")
+                .generate_codes();
+
+            self.dc_tables
+                .get_mut(i)
+                .expect("Should not panic")
+                .generate_codes();
+        }
+    }
+
+    pub fn color_component(&self, index: usize) -> Option<&ColorComponent> {
+        self.color_components.get(index)
+    }
+
+    pub fn components_number(&self) -> u8 {
+        self.components_number
+    }
+
+    pub fn restart_interval(&self) -> u16 {
+        self.restart_interval
+    }
+
+    pub fn mcu_width(&self) -> usize {
+        (self.width as usize + 7) / 8
+    }
+
+    pub fn mcu_height(&self) -> usize {
+        (self.height as usize + 7) / 8
     }
 }
 
@@ -361,8 +407,8 @@ impl fmt::Display for JPEGHeader {
             let color_component: &ColorComponent = &self.color_components[i];
 
             write!(f, "Component ID: {}\n", i + 1)?;
-            write!(f, "Huffman DC Table ID: {}\n", color_component.huffman_dc_table_id)?;
-            write!(f, "Huffman AC Table ID: {}\n", color_component.huffman_ac_table_id)?;
+            write!(f, "Huffman DC Table ID: {}\n", color_component.huffman_dc_table_id())?;
+            write!(f, "Huffman AC Table ID: {}\n", color_component.huffman_ac_table_id())?;
         }
 
         write!(f, "DHT=============\n")?;
