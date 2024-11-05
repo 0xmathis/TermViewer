@@ -45,7 +45,7 @@ impl JPEGHeader {
         }
     }
 
-    pub fn from_binary(reader: &mut JpegBitReader) -> Result<Self> {
+    pub fn from_binary(reader: &mut JpegBitReader, debug: bool) -> Result<Self> {
         let mut header: JPEGHeader = JPEGHeader::default();
         let mut marker: u16 = reader.read_word()?;
 
@@ -60,7 +60,9 @@ impl JPEGHeader {
                 bail!("marker {marker:02X?}: unknown");
             };
 
-            println!("segment {marker:?}");
+            if debug {
+                println!("segment {marker:?}");
+            }
 
             match marker {
                 SegmentType::APPN => header.read_segment_appn(reader)?,

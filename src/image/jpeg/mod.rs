@@ -173,10 +173,10 @@ impl JPEG {
 }
 
 impl Image for JPEG {
-    fn from_stream(stream: BufReader<File>) -> Result<Self> {
+    fn from_stream(stream: BufReader<File>, debug: bool) -> Result<Self> {
         let mut reader: JpegBitReader = JpegBitReader::new(stream);
         let mut jpeg: Self = Self {
-            header: JPEGHeader::from_binary(&mut reader)?,
+            header: JPEGHeader::from_binary(&mut reader, debug)?,
             mcus: Vec::new(),
             reader,
         };

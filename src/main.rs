@@ -48,7 +48,7 @@ fn main() -> Result<()> {
     assert!(filepath.exists());
     assert!(filepath.is_file());
 
-    let bmp: Box<BMP> = from_file(&filepath, args.image_type)?.to_bmp();
+    let bmp: Box<BMP> = from_file(&filepath, args.image_type, args.debug)?.to_bmp();
 
     if args.save_bmp {
         let mut bmp_filepath: String = filepath.to_str().unwrap().to_owned();

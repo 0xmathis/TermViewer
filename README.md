@@ -7,6 +7,7 @@ For now, the code support
 - OS/2 1.x BITMAPCOREHEADER bitmap header
 - the images in `tests` folder
 
+The resolution of the displayed image adapt to the size of the terminal so try to zoom out to get a better view of the image !  
 Progressive jpeg or other bitmap headers might be implemented in the future  
 The current goal is to decode and display videos  
 
