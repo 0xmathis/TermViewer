@@ -20,7 +20,6 @@ pub mod mcu;
 pub enum ImageType {
     BMP,
     JPEG,
-    PNG,
 }
 
 pub trait Image {
@@ -35,7 +34,6 @@ pub fn from_file(filepath: &PathBuf, image_type: ImageType) -> Result<Box<dyn Im
     match image_type {
         ImageType::BMP => Ok(Box::new(BMP::from_stream(reader)?)),
         ImageType::JPEG => Ok(Box::new(JPEG::from_stream(reader)?)),
-        ImageType::PNG => todo!(),
     }
 }
 

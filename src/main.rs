@@ -17,11 +17,10 @@ struct Args {
     filepath: PathBuf,
 
     /// Type of the file to process
-    #[clap(short, long, default_value="jpeg")]
     image_type: ImageType,
 
     /// Type of the file to process
-    #[clap(short, long, default_value="level1")]
+    #[clap(short, long, default_value="level2")]
     scaling_level: ScalingLevel,
 
     /// Save intermediate BMP file
