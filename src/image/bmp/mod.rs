@@ -128,6 +128,10 @@ impl BMP {
     pub fn height(&self) -> u16 {
         self.header.height
     }
+
+    pub fn mcus(&self) -> &Vec<MCU> {
+        &self.mcus
+    }
 }
 
 impl Image for BMP {
@@ -143,12 +147,8 @@ impl Image for BMP {
         Ok(bmp)
     }
 
-    fn to_bmp(&mut self) -> Result<BMP> {
-        Ok(self.clone())
-    }
-
-    fn mcus(&self) -> &Vec<MCU> {
-        &self.mcus
+    fn to_bmp(self: Box<Self>) -> Box<BMP> {
+        self
     }
 }
 

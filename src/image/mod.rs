@@ -7,7 +7,6 @@ use std::path::PathBuf;
 
 use bmp::BMP;
 use jpeg::JPEG;
-use mcu::MCU;
 
 mod bit_reader;
 mod huffman;
@@ -19,15 +18,14 @@ pub mod mcu;
 
 #[derive(ValueEnum, Clone, Debug, Serialize)]
 pub enum ImageType {
+    BMP,
     JPEG,
     PNG,
-    BMP,
 }
 
 pub trait Image {
     fn from_stream(reader: BufReader<File>) -> Result<Self> where Self: Sized;
-    fn to_bmp(&mut self) -> Result<BMP>;
-    fn mcus(&self) -> &Vec<MCU>;
+    fn to_bmp(self: Box<Self>) -> Box<BMP>;
 }
 
 pub fn from_file(filepath: &PathBuf, image_type: ImageType) -> Result<Box<dyn Image>> {

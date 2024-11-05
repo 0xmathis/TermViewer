@@ -37,7 +37,6 @@ impl JPEG {
         let mut previous_dcs: [i32; 3] = [0; 3];
         let restart_interval: usize = header.restart_interval() as usize;
 
-        // Refactor these loops ?
         for i in 0..mcu_height*mcu_width {
             if restart_interval != 0 && i % restart_interval == 0 {
                 previous_dcs[0] = 0;
@@ -83,8 +82,11 @@ impl JPEG {
         let mcu_height: usize = header.mcu_height();
         let mcu_width: usize = header.mcu_width();
 
-        // Refactor these loops ?
         for i in 0..mcu_height*mcu_width {
+            let mcu: &mut MCU = self.mcus
+                .get_mut(i)
+                .expect("Should not panic");
+
             for j in 0..header.components_number() as usize {
                 let table_id: u8 = header
                     .color_component(j)
@@ -93,9 +95,7 @@ impl JPEG {
                 let table: &QuantizationTable = header
                     .quantization_tables(table_id as usize)
                     .expect("Should not panic");
-                self.mcus
-                    .get_mut(i)
-                    .expect("Should not panic")
+                mcu
                     .component_mut(j)
                     .expect("Should not panic")
                     .dequantize(table);
@@ -138,7 +138,6 @@ impl JPEG {
         let dct_m: [f32; 6] = Self::dct_m();
         let dct_s: [f32; 8] = Self::dct_s();
 
-        // Refactor these loops ?
         for i in 0..mcu_height*mcu_width {
             let mcu: &mut MCU = self.mcus
                 .get_mut(i)
@@ -176,25 +175,22 @@ impl JPEG {
 impl Image for JPEG {
     fn from_stream(stream: BufReader<File>) -> Result<Self> {
         let mut reader: JpegBitReader = JpegBitReader::new(stream);
-
-        Ok(Self {
+        let mut jpeg: Self = Self {
             header: JPEGHeader::from_binary(&mut reader)?,
             mcus: Vec::new(),
             reader,
-        })
+        };
+
+        jpeg.huffman_decode()?;
+        jpeg.dequantize()?;
+        jpeg.inverse_dct()?;
+        jpeg.ycbcr_to_rgb()?;
+
+        Ok(jpeg)
     }
 
-    fn to_bmp(&mut self) -> Result<BMP> {
-        self.huffman_decode()?;
-        self.dequantize()?;
-        self.inverse_dct()?;
-        self.ycbcr_to_rgb()?;
-
-        Ok(BMP::new(self.header.to_bmp(), self.mcus.clone()))
-    }
-
-    fn mcus(&self) -> &Vec<MCU> {
-        &self.mcus
+    fn to_bmp(self: Box<Self>) -> Box<BMP> {
+        Box::new(BMP::new(self.header.to_bmp(), self.mcus))
     }
 }
 

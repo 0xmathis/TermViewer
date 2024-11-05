@@ -102,17 +102,13 @@ impl MCU {
 
     pub fn ycbcr_to_rgb(&mut self) -> () {
         for i in 0..64 {
-            let mut r: i32 = self.components[0][i] + (1.402 * self.components[2][i] as f32) as i32 + 128;
-            let mut g: i32 = self.components[0][i] - (0.344 * self.components[1][i] as f32) as i32 - (0.714 * self.components[2][i] as f32) as i32 + 128;
-            let mut b: i32 = self.components[0][i] + (1.772 * self.components[1][i] as f32) as i32 + 128;
+            let r: i32 = self.components[0][i] + (1.402 * self.components[2][i] as f32) as i32 + 128;
+            let g: i32 = self.components[0][i] - (0.344 * self.components[1][i] as f32) as i32 - (0.714 * self.components[2][i] as f32) as i32 + 128;
+            let b: i32 = self.components[0][i] + (1.772 * self.components[1][i] as f32) as i32 + 128;
 
-            if r < 0 { r = 0; } else if r > 255 { r = 255; }
-            if g < 0 { g = 0; } else if g > 255 { g = 255; }
-            if b < 0 { b = 0; } else if b > 255 { b = 255; }
-
-            self.components[0][i] = r;
-            self.components[1][i] = g;
-            self.components[2][i] = b;
+            self.components[0][i] = r.max(0).min(255);
+            self.components[1][i] = g.max(0).min(255);
+            self.components[2][i] = b.max(0).min(255);
         }
     }
 }
