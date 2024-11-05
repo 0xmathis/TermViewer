@@ -60,7 +60,7 @@ fn main() -> Result<()> {
     }
 
     if render {
-        draw(bmp)?;
+        draw(&bmp)?;
     }
 
     Ok(())

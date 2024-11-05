@@ -2,7 +2,6 @@ use anyhow::Result;
 use std::fmt;
 
 use crate::image::bit_reader::BitReader;
-
 use super::bmp_bit_reader::BmpBitReader;
 
 #[derive(Clone, Debug, Default)]
@@ -34,6 +33,7 @@ impl BMPHeader {
         count += 4;
 
         header.header_size = reader.read_double()?.swap_bytes();
+        assert_eq!(12u32, header.header_size);
         count += 4;
 
         header.width = reader.read_word()?.swap_bytes();

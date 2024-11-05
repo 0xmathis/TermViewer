@@ -1,10 +1,10 @@
-use std::io::{stdout, Stdout, Write};
+use anyhow::Result;
+use std::io::{stdout, Write};
+use terminal_size::{Width, Height, terminal_size};
 
 use crate::image::Image;
 use crate::image::bmp::BMP;
 use crate::image::mcu::MCU;
-use anyhow::Result;
-use terminal_size::{Width, Height, terminal_size};
 
 pub fn level1(image: &BMP, terminal_width: usize, terminal_height: usize) -> Result<()> {
     let image_height: usize = image.height() as usize;
@@ -37,8 +37,8 @@ pub fn level1(image: &BMP, terminal_width: usize, terminal_height: usize) -> Res
             let g = mcu.component(1).expect("Should exist")[pixel_index] as u8;
             let b = mcu.component(2).expect("Should exist")[pixel_index] as u8;
 
-            output += &background(r, g, b);
-            output += "  ";
+            output.push_str(&background(r, g, b));
+            output.push_str(&"  ");
         }
 
         image_column += step;
@@ -46,7 +46,7 @@ pub fn level1(image: &BMP, terminal_width: usize, terminal_height: usize) -> Res
         if image_column >= image_width {
             image_column = 0;
             image_row += step;
-            output += &goto(image_row / step, 0);
+            output.push_str(&goto(image_row / step, 0));
         }
 
         if image_row >= image_height {
@@ -54,8 +54,7 @@ pub fn level1(image: &BMP, terminal_width: usize, terminal_height: usize) -> Res
         }
     }
 
-    output += &reset();
-    // print!("{output}");
+    output.push_str(&reset());
     Ok(stdout().write_all(output.as_bytes())?)
 }
 
@@ -67,7 +66,7 @@ pub fn level1(image: &BMP, terminal_width: usize, terminal_height: usize) -> Res
 //     todo!();
 // }
 
-pub fn draw(image: BMP) -> Result<()> {
+pub fn draw(image: &BMP) -> Result<()> {
     clean();
     hide_cursor();
 
