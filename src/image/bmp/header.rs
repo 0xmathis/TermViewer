@@ -1,8 +1,7 @@
 use anyhow::Result;
-use std::fmt;
+use std::{fmt, io::Read};
 
 use crate::image::bit_reader::BitReader;
-use super::bmp_bit_reader::BmpBitReader;
 
 #[derive(Clone, Debug, Default)]
 pub struct BMPHeader {
@@ -16,37 +15,41 @@ pub struct BMPHeader {
 }
 
 impl BMPHeader {
-    pub fn from_binary(reader: &mut BmpBitReader) -> Result<Self> {
+    pub fn from_binary<T, U>(stream: &mut U) -> Result<Self>
+    where
+        T: Read,
+        U: BitReader<T>,
+    {
         let mut header: BMPHeader = BMPHeader::default();
         let mut count: u32 = 0;
 
-        assert_eq!(0x424D, reader.read_word()?);
+        assert_eq!(0x424D, stream.read_word()?);
         count += 2;
 
-        header.bmp_size = reader.read_double()?.swap_bytes();
+        header.bmp_size = stream.read_double()?.swap_bytes();
         count += 4;
 
-        assert_eq!(0u32, reader.read_double()?);
+        assert_eq!(0u32, stream.read_double()?);
         count += 4;
 
-        header.starting_offset = reader.read_double()?.swap_bytes();
+        header.starting_offset = stream.read_double()?.swap_bytes();
         count += 4;
 
-        header.header_size = reader.read_double()?.swap_bytes();
+        header.header_size = stream.read_double()?.swap_bytes();
         assert_eq!(12u32, header.header_size);
         count += 4;
 
-        header.width = reader.read_word()?.swap_bytes();
+        header.width = stream.read_word()?.swap_bytes();
         count += 2;
 
-        header.height = reader.read_word()?.swap_bytes();
+        header.height = stream.read_word()?.swap_bytes();
         count += 2;
 
-        header.components_number = reader.read_word()?.swap_bytes();
+        header.components_number = stream.read_word()?.swap_bytes();
         assert_eq!(1u16, header.components_number);
         count += 2;
 
-        header.bits_per_pixel = reader.read_word()?.swap_bytes();
+        header.bits_per_pixel = stream.read_word()?.swap_bytes();
         count += 2;
 
         assert_eq!(header.starting_offset, count);

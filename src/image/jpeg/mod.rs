@@ -1,8 +1,7 @@
 use anyhow::Result;
 use std::f32::consts::PI;
 use std::fmt;
-use std::fs::File;
-use std::io::BufReader;
+use std::io::Read;
 
 use header::JPEGHeader;
 use jpeg_bit_reader::JpegBitReader;
@@ -19,13 +18,13 @@ mod jpeg_bit_reader;
 mod segment;
 
 #[derive(Debug)]
-pub struct JPEG {
+pub struct JPEG<T: Read> {
     header: JPEGHeader,
     mcus: Vec<MCU>,
-    reader: JpegBitReader,
+    stream: JpegBitReader<T>,
 }
 
-impl JPEG {
+impl<T: Read> JPEG<T> {
     fn huffman_decode(&mut self) -> Result<()> {
         let header: &mut JPEGHeader = &mut self.header;
 
@@ -42,7 +41,7 @@ impl JPEG {
                 previous_dcs[0] = 0;
                 previous_dcs[1] = 0;
                 previous_dcs[2] = 0;
-                self.reader.align();
+                self.stream.align();
             }
 
             let mcu: &mut MCU = self.mcus
@@ -69,7 +68,7 @@ impl JPEG {
                     .get_mut(j)
                     .expect("Should not panic");
 
-                mcu.decode(j, &mut self.reader, previous_dc, ac_table, dc_table)?;
+                mcu.decode(j, &mut self.stream, previous_dc, ac_table, dc_table)?;
             }
         }
 
@@ -172,13 +171,13 @@ impl JPEG {
     }
 }
 
-impl Image for JPEG {
-    fn from_stream(stream: BufReader<File>, debug: bool) -> Result<Self> {
-        let mut reader: JpegBitReader = JpegBitReader::new(stream);
+impl<T: Read> Image<T> for JPEG<T> {
+    fn from_stream(stream: T, debug: bool) -> Result<Self> {
+        let mut stream = JpegBitReader::new(stream);
         let mut jpeg: Self = Self {
-            header: JPEGHeader::from_binary(&mut reader, debug)?,
+            header: JPEGHeader::from_binary(&mut stream, debug)?,
             mcus: Vec::new(),
-            reader,
+            stream,
         };
 
         jpeg.huffman_decode()?;
@@ -189,12 +188,12 @@ impl Image for JPEG {
         Ok(jpeg)
     }
 
-    fn to_bmp(self: Box<Self>) -> Box<BMP> {
-        Box::new(BMP::new(self.header.to_bmp(), self.mcus))
+    fn to_bmp(self: Self) -> BMP<T> {
+        BMP::new(self.header.to_bmp(), self.mcus, self.stream.to_bmp())
     }
 }
 
-impl fmt::Display for JPEG {
+impl<T: Read> fmt::Display for JPEG<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Header:\n\n{}\n", self.header)
     }

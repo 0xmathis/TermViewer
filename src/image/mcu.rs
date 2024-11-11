@@ -1,3 +1,5 @@
+use std::io::Read;
+
 use anyhow::{bail, Result};
 
 use super::bit_reader::BitReader;
@@ -18,11 +20,15 @@ impl MCU {
         self.components.get_mut(i)
     }
 
-    fn next_symbol(reader: &mut impl BitReader, table: &HuffmanTable) -> Result<u8> {
+    fn next_symbol<T, U>(stream: &mut T, table: &HuffmanTable) -> Result<u8>
+    where
+        T: BitReader<U>,
+        U: Read,
+    {
         let mut code: u32 = 0;
 
         for i in 0..16 {
-            let bit: u8 = reader.read_bit()?;
+            let bit: u8 = stream.read_bit()?;
             code = (code << 1) | bit as u32;
 
             for j in table.offsets(i)..table.offsets(i+1) {
@@ -35,15 +41,19 @@ impl MCU {
         bail!("No next symbol detected")
     }
 
-    pub fn decode(&mut self, component_id: usize, reader: &mut impl BitReader, previous_dc: &mut i32, ac_table: &HuffmanTable, dc_table: &HuffmanTable) -> Result<()> {
+    pub fn decode<T, U>(&mut self, component_id: usize, stream: &mut T, previous_dc: &mut i32, ac_table: &HuffmanTable, dc_table: &HuffmanTable) -> Result<()>
+    where
+        T: BitReader<U>,
+        U: Read,
+    {
         let Some(component) = self.component_mut(component_id) else {
             bail!("No component {}", component_id);
         };
 
-        let length: u8 = Self::next_symbol(reader, dc_table)?;
+        let length: u8 = Self::next_symbol(stream, dc_table)?;
         assert!(length <= 11);
 
-        let mut dc_coefficient: i32 = reader.read_bits(length as usize)?;
+        let mut dc_coefficient: i32 = stream.read_bits(length as usize)?;
 
         if length != 0 && dc_coefficient < (1 << (length - 1)) {
             dc_coefficient -= (1 << length) - 1;
@@ -57,7 +67,7 @@ impl MCU {
         let zigzag_map: [usize; 64] = Self::zigzag_map();
 
         while i < 64 {
-            let symbol: u8 = Self::next_symbol(reader, ac_table)?;
+            let symbol: u8 = Self::next_symbol(stream, ac_table)?;
 
             if symbol == 0x00 {
                 return Ok(());
@@ -72,7 +82,7 @@ impl MCU {
             i += skip_zeros as usize;
 
             if coefficient_length != 0 {
-                let mut coefficient = reader.read_bits(coefficient_length as usize)?;
+                let mut coefficient = stream.read_bits(coefficient_length as usize)?;
 
                 if coefficient < (1 << (coefficient_length - 1)) {
                     coefficient -= (1 << coefficient_length) - 1;

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::ValueEnum;
 use serde::Serialize;
-use std::io::{stdout, Write};
+use std::io::{stdout, Read, Write};
 use terminal_size::{Width, Height, terminal_size};
 
 use crate::image::bmp::BMP;
@@ -13,7 +13,7 @@ pub enum ScalingLevel {
     LEVEL2,
 }
 
-pub fn level1(image: Box<BMP>, terminal_width: usize, terminal_height: usize) -> Result<()> {
+pub fn level1<T: Read>(image: BMP<T>, terminal_width: usize, terminal_height: usize) -> Result<()> {
     let image_height: usize = image.height() as usize;
     let image_width: usize = image.width() as usize;
     let mcus: &Vec<MCU> = image.mcus();
@@ -96,7 +96,7 @@ fn average(mcus: &Vec<MCU>, mcu_width: usize, width: usize, height: usize, x: us
     (average_r as u8, average_g as u8, average_b as u8)
 }
 
-pub fn level2(image: Box<BMP>, terminal_width: usize, terminal_height: usize) -> Result<()> {
+pub fn level2<T: Read>(image: BMP<T>, terminal_width: usize, terminal_height: usize) -> Result<()> {
     let image_height: usize = image.height() as usize;
     let image_width: usize = image.width() as usize;
     let mcus: &Vec<MCU> = image.mcus();
@@ -136,7 +136,7 @@ pub fn level2(image: Box<BMP>, terminal_width: usize, terminal_height: usize) ->
     Ok(stdout().write_all(output.as_bytes())?)
 }
 
-pub fn draw(image: Box<BMP>, scaling_level: ScalingLevel) -> Result<()> {
+pub fn draw<T: Read>(image: BMP<T>, scaling_level: ScalingLevel) -> Result<()> {
     clean();
     hide_cursor();
 

@@ -1,11 +1,10 @@
 use anyhow::Result;
-use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::Read;
 
-pub trait BitReader {
-    fn new(stream: BufReader<File>) -> Self;
+pub trait BitReader<T: Read> {
+    fn new(stream: T) -> Self;
     fn set_next_bit(&mut self, next_bit: usize) -> ();
-    fn stream(&mut self) -> &mut BufReader<File>;
+    fn stream(&mut self) -> &mut T;
     fn read_bit(&mut self) -> Result<u8>;
 
     fn read_byte(&mut self) -> Result<u8> {

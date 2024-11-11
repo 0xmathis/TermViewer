@@ -1,18 +1,17 @@
 use anyhow::Result;
-use std::fs::File;
-use std::io::BufReader;
+use std::io::Read;
 
 use crate::image::bit_reader::BitReader;
 
 #[derive(Debug)]
-pub struct BmpBitReader {
+pub struct BmpBitReader<T: Read> {
     next_bit: usize,
     current_byte: u8,
-    stream: BufReader<File>,
+    stream: T,
 }
 
-impl BitReader for BmpBitReader {
-    fn new(stream: BufReader<File>) -> Self {
+impl <T: Read> BitReader<T> for BmpBitReader<T> {
+    fn new(stream: T) -> Self {
         Self {
             next_bit: 0,
             current_byte: 0,
@@ -36,7 +35,7 @@ impl BitReader for BmpBitReader {
         self.next_bit = next_bit;
     }
 
-    fn stream(&mut self) -> &mut BufReader<File> {
+    fn stream(&mut self) -> &mut T {
         &mut self.stream
     }
 }

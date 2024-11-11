@@ -1,20 +1,25 @@
 use anyhow::{bail, Result};
-use std::fs::File;
-use std::io::BufReader;
+use std::io::Read;
 
-use crate::image::bit_reader::BitReader;
+use crate::image::{bit_reader::BitReader, bmp::bmp_bit_reader::BmpBitReader};
 use super::segment::SegmentType;
 
 #[derive(Debug)]
-pub struct JpegBitReader {
+pub struct JpegBitReader<T: Read> {
     next_bit: usize,
     current_byte: u8,
     next_byte: u8,
-    stream: BufReader<File>,
+    stream: T,
 }
 
-impl BitReader for JpegBitReader {
-    fn new(stream: BufReader<File>) -> Self {
+impl<T: Read> JpegBitReader<T> {
+    pub fn to_bmp(self) -> BmpBitReader<T> {
+        BmpBitReader::new(self.stream)
+    }
+}
+
+impl<T: Read> BitReader<T> for JpegBitReader<T> {
+    fn new(stream: T) -> Self {
         Self {
             next_bit: 0,
             current_byte: 0,
@@ -57,7 +62,7 @@ impl BitReader for JpegBitReader {
         self.next_bit = next_bit;
     }
 
-    fn stream(&mut self) -> &mut BufReader<File> {
+    fn stream(&mut self) -> &mut T {
         &mut self.stream
     }
 }

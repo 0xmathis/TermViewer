@@ -1,9 +1,7 @@
 use anyhow::Result;
 use clap::ValueEnum;
 use serde::Serialize;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::PathBuf;
+use std::io::Read;
 
 use bmp::BMP;
 use jpeg::JPEG;
@@ -22,18 +20,18 @@ pub enum ImageType {
     JPEG,
 }
 
-pub trait Image {
-    fn from_stream(reader: BufReader<File>, debug: bool) -> Result<Self> where Self: Sized;
-    fn to_bmp(self: Box<Self>) -> Box<BMP>;
+pub trait Image<T>
+where
+    T: Read,
+    Self: Sized,
+{
+    fn from_stream(stream: T, debug: bool) -> Result<Self>;
+    fn to_bmp(self) -> BMP<T>;
 }
 
-pub fn from_file(filepath: &PathBuf, image_type: ImageType, debug: bool) -> Result<Box<dyn Image>> {
-    let file: File = File::open(filepath)?;
-    let reader: BufReader<File> = BufReader::new(file);
-
+pub fn from_file<T: Read>(stream: T, image_type: ImageType, debug: bool) -> Result<BMP<T>> {
     match image_type {
-        ImageType::BMP => Ok(Box::new(BMP::from_stream(reader, debug)?)),
-        ImageType::JPEG => Ok(Box::new(JPEG::from_stream(reader, debug)?)),
+        ImageType::BMP => BMP::from_stream(stream, debug),
+        ImageType::JPEG => Ok(JPEG::from_stream(stream, debug)?.to_bmp()),
     }
 }
-

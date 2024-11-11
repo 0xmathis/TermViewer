@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, io::Read};
 use anyhow::Result;
 
 use super::bit_reader::BitReader;
@@ -14,16 +14,20 @@ impl QuantizationTable {
         self.table[index]
     }
 
-    pub fn from_binary(&mut self, reader: &mut impl BitReader, table_id: u8, element_size: u8) -> Result<usize> {
+    pub fn from_binary<T, U>(&mut self, stream: &mut T, table_id: u8, element_size: u8) -> Result<usize>
+    where
+        T: BitReader<U>,
+        U: Read,
+    {
         self.table_id = table_id;
 
         if element_size == 0 {
             for i in Self::zigzag_map().into_iter() {
-                self.table[i] = reader.read_byte()? as u16;
+                self.table[i] = stream.read_byte()? as u16;
             }
         } else {
             for i in Self::zigzag_map().into_iter() {
-                self.table[i] = reader.read_word()?;
+                self.table[i] = stream.read_word()?;
             }
         }
 

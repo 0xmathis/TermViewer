@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, io::Read};
 
 use anyhow::Result;
 
@@ -40,7 +40,11 @@ impl HuffmanTable {
         self.codes[index]
     }
 
-    pub fn from_binary(&mut self, reader: &mut impl BitReader, table_id: u8, is_ac_table: bool) -> Result<usize> {
+    pub fn from_binary<T, U>(&mut self, stream: &mut T, table_id: u8, is_ac_table: bool) -> Result<usize>
+    where
+        T: BitReader<U>,
+        U: Read,
+    {
         self.symbols[0] = 0;
         self.table_id = table_id;
         self.is_ac_table = is_ac_table;
@@ -49,13 +53,13 @@ impl HuffmanTable {
         let mut symbols_count: usize = 0;
 
         for i in 1..17 {
-            symbols_count += reader.read_byte()? as usize;
+            symbols_count += stream.read_byte()? as usize;
             assert!(symbols_count <= 162);
             self.offsets[i] = symbols_count as u8;
         }
 
         for i in 0..symbols_count {
-            self.symbols[i as usize] = reader.read_byte()?;
+            self.symbols[i as usize] = stream.read_byte()?;
         }
 
         Ok(17 + symbols_count)

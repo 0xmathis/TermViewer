@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, io::Read};
 use anyhow::Result;
 
 use crate::image::bit_reader::BitReader;
@@ -15,11 +15,15 @@ pub struct ColorComponent {
 }
 
 impl ColorComponent {
-    pub fn from_binary(&mut self, reader: &mut impl BitReader) -> Result<()> {
+    pub fn from_binary<T, U>(&mut self, stream: &mut T) -> Result<()>
+    where
+        T: BitReader<U>,
+        U: Read,
+    {
         assert_eq!(false, self.used_frame);
 
-        let sampling_factor: u8 = reader.read_byte()?;
-        let quantization_table_id: u8 = reader.read_byte()?;
+        let sampling_factor: u8 = stream.read_byte()?;
+        let quantization_table_id: u8 = stream.read_byte()?;
         assert!(quantization_table_id <= 3);
 
         self.horizontal_sampling_factor = (sampling_factor >> 4) & 0x0F;
