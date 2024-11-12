@@ -37,6 +37,9 @@ struct Cli {
     no_render: bool,
 }
 
+// TODO: GIF
+// TODO: The drawer ask to image/video to decode next frame
+// TODO: Read data from STDIN
 // TODO: Be able to decode video stream
 // https://yasoob.me/posts/understanding-and-writing-jpeg-decoder-in-python/#jpeg-decoding
 // https://koushtav.me/jpeg/tutorial/c++/decoder/2019/03/02/lets-write-a-simple-jpeg-library-part-2/#detailed-description-of-the-markers
