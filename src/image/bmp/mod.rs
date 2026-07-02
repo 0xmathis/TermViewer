@@ -137,7 +137,7 @@ impl<T: Read> BMP<T> {
 }
 
 impl<T: Read> Image<T> for BMP<T> {
-    fn from_stream(stream: T, _debug: bool) -> Result<Self> {
+    fn from_stream(stream: T) -> Result<Self> {
         let mut stream = BmpBitReader::new(stream);
         let mut bmp: Self = Self {
             header: BMPHeader::from_binary(&mut stream)?,

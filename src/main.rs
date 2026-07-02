@@ -28,10 +28,6 @@ struct Cli {
     #[clap(long)]
     save_bmp: bool,
 
-    /// Enable debug
-    #[clap(long)]
-    debug: bool,
-
     /// Disable rendering
     #[clap(long)]
     no_render: bool,
@@ -55,7 +51,7 @@ fn main() -> Result<()> {
     let file: File = File::open(&filepath)?;
     let stream: BufReader<File> = BufReader::new(file);
 
-    let bmp: BMP<BufReader<File>> = from_file(stream, cli.image_type, cli.debug)?;
+    let bmp: BMP<BufReader<File>> = from_file(stream, cli.image_type)?;
 
     if cli.save_bmp {
         let bmp_filepath: String = filepath.to_str().unwrap().to_owned() + ".bmp";

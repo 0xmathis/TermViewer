@@ -25,13 +25,13 @@ where
     T: Read,
     Self: Sized,
 {
-    fn from_stream(stream: T, debug: bool) -> Result<Self>;
+    fn from_stream(stream: T) -> Result<Self>;
     fn to_bmp(self) -> BMP<T>;
 }
 
-pub fn from_file<T: Read>(stream: T, image_type: ImageType, debug: bool) -> Result<BMP<T>> {
+pub fn from_file<T: Read>(stream: T, image_type: ImageType) -> Result<BMP<T>> {
     match image_type {
-        ImageType::BMP => BMP::from_stream(stream, debug),
-        ImageType::JPEG => Ok(JPEG::from_stream(stream, debug)?.to_bmp()),
+        ImageType::BMP => BMP::from_stream(stream),
+        ImageType::JPEG => Ok(JPEG::from_stream(stream)?.to_bmp()),
     }
 }

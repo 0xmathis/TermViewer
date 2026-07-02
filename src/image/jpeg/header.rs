@@ -46,7 +46,7 @@ impl JPEGHeader {
         }
     }
 
-    pub fn from_binary<T: Read>(stream: &mut JpegBitReader<T>, debug: bool) -> Result<Self> {
+    pub fn from_binary<T: Read>(stream: &mut JpegBitReader<T>) -> Result<Self> {
         let mut header: JPEGHeader = JPEGHeader::default();
         let mut marker: u16 = stream.read_word()?;
 
@@ -60,10 +60,6 @@ impl JPEGHeader {
             let Some(marker) = SegmentType::from_marker(marker) else {
                 bail!("marker {marker:02X?}: unknown");
             };
-
-            if debug {
-                println!("segment {marker:?}");
-            }
 
             match marker {
                 SegmentType::APPN => header.read_segment_appn(stream)?,
