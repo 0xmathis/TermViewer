@@ -4,11 +4,11 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
+use drawer::{Drawer, ScalingLevel};
 use image::{bmp::BMP, from_file, ImageType};
-use term_drawer::drawer::{draw, ScalingLevel};
 
+mod drawer;
 mod image;
-mod term_drawer;
 
 /// TermViewer
 #[derive(Parser)]
@@ -59,8 +59,9 @@ fn main() -> Result<()> {
         bmp.write_to_file(PathBuf::from(bmp_filepath))?;
     }
 
+    let drawer: Drawer = Drawer;
     if !cli.no_render {
-        draw(bmp, cli.scaling_level)?;
+        drawer.draw(bmp, cli.scaling_level)?;
     }
 
     Ok(())
