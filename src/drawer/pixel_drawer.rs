@@ -3,7 +3,7 @@ use image::{DynamicImage, GenericImageView};
 use std::io::{Write, stdout};
 use terminal_size::{Height, Width, terminal_size};
 
-use crate::drawer::ScalingLevel;
+use crate::drawer::{Drawer, ScalingLevel};
 
 pub struct PixelDrawer;
 
@@ -125,28 +125,6 @@ impl PixelDrawer {
         Self::show_cursor();
         Ok(())
     }
-
-    fn background(r: u8, g: u8, b: u8) -> String {
-        format!("\u{001b}[48;2;{r};{g};{b}m")
-    }
-
-    fn reset() -> String {
-        format!("\u{001b}[0m")
-    }
-
-    fn show_cursor() {
-        print!("\u{001b}[?25h");
-    }
-
-    fn hide_cursor() {
-        print!("\u{001b}[?25l");
-    }
-
-    fn goto(row: usize, column: usize) -> String {
-        format!("\u{001b}[{row};{column}H")
-    }
-
-    fn clean() {
-        print!("\u{001b}[2J");
-    }
 }
+
+impl Drawer for PixelDrawer { }
